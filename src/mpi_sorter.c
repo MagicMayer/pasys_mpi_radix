@@ -10,28 +10,25 @@
 static char *progname = NULL;
 extern int mpi_init(void);
 
-int main(int argc, char *argv[]) {
-    tweet_t t1 = { .line = 0, .hits = 42, .month=6 , .day=3, .text = "Hallo"};
-    tweet_t t2 = { .line = 0, .hits = 42, .month=7 , .day=2, .text = "Hallo"};
-    int res = 0;
+extern int tweetfile_parse(const char *);
 
+int main(int argc, char *argv[]) {
     if((progname = strrchr(argv[0], '/')) != NULL) {
         progname++;
     } else {
         progname = argv[0];
     }
 
-    MPI_Init(&argc, &argv);
-    if(mpi_init() != 0) {
-        MPI_Finalize();
-        return(1);
+    printf("Sizeof struct tweet_t: %lu\n", sizeof(tweet_t));
+    if(tweetfile_parse("../klein/twitter.data.0")) {
+        printf("Fehler\n");
     }
-    res = tweet_compare(&t1, &t2);
-    printf("Comparing tweets returned: %d\n", res);
-    tweet_print(stdout, &t1);
-    tweet_print(stdout, &t2);
 
-    MPI_Finalize();
-
+//     if(mpi_init() != 0) {
+//         MPI_Finalize();
+//         return(1);
+//     }
+//     MPI_Finalize();
+// 
     return(0);
 }

@@ -5,8 +5,8 @@
 #include <tweet.h>
 
 void tweet_print(FILE *stream, const tweet_t *t) {
-    fprintf(stream, "<tweet> num(%d) hits(%d) month(%d) day(%d) text(%s)\n",
-            t->line, t->hits, t->month, t->day, t->text);
+    fprintf(stream, "<tweet> hits(%d) month(%d) day(%d) text(%s)\n",
+            t->hits, t->month, t->day, t->text);
 }
 
 int tweet_compare(const tweet_t *t1, const tweet_t *t2) {

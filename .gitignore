@@ -22,5 +22,10 @@
 *.x86_64
 *.hex
 
-# Binaries
-/mpi_sorter
+# oops ...
+core.*
+
+# Files created during Build or Logs etc.
+mpi_sorter
+*.log
+*.pdf
