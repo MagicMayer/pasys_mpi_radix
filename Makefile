@@ -1,5 +1,5 @@
 CC		=	mpicc
-CFLAGS	=	-pipe -g3 -Og -ggdb -m64 -std=gnu99 -fopenmp -Wall -Wshadow \
+CFLAGS	=	-pipe -g3 -ggdb -rdynamic -m64 -std=gnu99 -fopenmp -Wall -Wshadow \
 			-Wpointer-arith -Wformat-security -Wclobbered -Wcast-align
 PFLAGS	=	-D_FORTIFY_SOURCE=2 -D_GNU_SOURCE 
 LDFLAGS	=	-lrt
@@ -39,3 +39,4 @@ clean:
 
 clean-all: clean
 	rm -rf $(BIN)
+	cd doc && make clean-all

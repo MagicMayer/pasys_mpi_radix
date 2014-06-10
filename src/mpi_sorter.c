@@ -19,7 +19,6 @@ int main(int argc, char *argv[]) {
         progname = argv[0];
     }
 
-    printf("Sizeof struct tweet_t: %lu\n", sizeof(tweet_t));
     if(tweetfile_parse("../klein/twitter.data.0")) {
         printf("Fehler\n");
     }

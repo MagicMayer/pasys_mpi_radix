@@ -11,7 +11,7 @@
     #define PACKED
 #endif
 
-#define MAX_TWEET_LENGTH     11
+#define MAX_TWEET_LENGTH     32
 
 /* explicit Structs instead of weird Pointer Magic 
  * keeps the Code readable! */ 
@@ -19,7 +19,7 @@ struct __tweet {
     uint8_t  hits;
     uint8_t  month;
     uint8_t  day;
-    char     text[MAX_TWEET_LENGTH];
+    char     text[MAX_TWEET_LENGTH + 1];
     uint16_t fnum;      /* file number */
     uint32_t lnum;      /* line number */
 } PACKED; 
