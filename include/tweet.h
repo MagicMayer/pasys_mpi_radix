@@ -25,6 +25,8 @@ struct __tweet {
 } PACKED; 
 typedef struct __tweet tweet_t;
 
-void tweet_print(FILE *, const tweet_t *);
 int tweet_compare(const tweet_t *, const tweet_t *);
+int tweet_count_hits(char *, char *);
+
+void tweet_print(FILE *, const tweet_t *);
 #endif /* __TWEET_SORTER_H__ */

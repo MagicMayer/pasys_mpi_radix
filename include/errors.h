@@ -13,4 +13,13 @@
         } \
     } while(0)
 
+#define ASSERT_NULL_STRING(var,ret,eno) \
+    do { \
+        if(!var || !*var) { \
+            errno = eno; \
+            LOG_ERROR("<error : %s> (%d) %s: '" #var "'\n", __func__, eno, strerror(eno)); \
+            return(ret); \
+        } \
+    } while(0)
+
 #endif /* __TWEET_ERROR_H__ */

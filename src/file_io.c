@@ -67,7 +67,6 @@ int tweetfile_parse (const char *fname) {
     while(tweetfile_readline(fd, &buf, 1024) > 0) {
         cur_line = buf;
         line++;
-        tweet.hits = 0;
         if(__tweetline_get_uint16(&cur_line, &tweet.fnum)) {
             LOG_ERROR("fnum\n");
             continue;
@@ -86,13 +85,16 @@ int tweetfile_parse (const char *fname) {
         }
         memcpy(&tweet.text, cur_line, MAX_TWEET_LENGTH - 1);
         tweet.text[MAX_TWEET_LENGTH] = 0;
-        tweet_print(stderr, &tweet);
+        if((tweet.hits = tweet_count_hits(cur_line, "YOU")) > 0)
+            tweet_print(stdout, &tweet);
     }
     return(0);
 }
 
 /* Various Functions to deserialize the Strings in tweetline */
 int8_t __tweetline_get_string(char **lbuf, char **string) {
+    ASSERT_NULL_ARG(lbuf, -1, EINVAL);
+    ASSERT_NULL_ARG(string, -1, EINVAL);
     for( ; **lbuf && ((**lbuf == ' ') || (**lbuf == '\t')) ; ++*lbuf);
     if(!**lbuf || (**lbuf == '\n'))
         return(-1);
@@ -139,7 +141,7 @@ int8_t __tweetline_get_uint8(char **lbuf, uint8_t *num) {
 
 int8_t __tweetline_get_month(char **lbuf, uint8_t *month) {
     char __mbuf[4] = { 0 };
-    char *m = &__mbuf[0];
+    char *m = __mbuf;
 
     ASSERT_NULL_ARG(lbuf, -1, EINVAL);
     ASSERT_NULL_ARG(month, -1, EINVAL);
