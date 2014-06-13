@@ -51,12 +51,14 @@ size_t tweetfile_readline(int fd, char **buffer, size_t bsize) {
     return((size_t) (p - *buffer));
 }
 
-int tweetfile_parse (const char *fname) {
+int tweetfile_parse (char *fname, char *key) {
     int fd = -1, line = 0;
     char *buf = NULL, *cur_line = NULL; 
-    tweet_t tweet;
+    tweet_t *tweet = NULL;
     
     ASSERT_NULL_ARG(fname, -1, EINVAL);
+    ASSERT_NULL_ARG(key, -1, EINVAL);
+
     if((fd = tweetfile_open(fname)) <= 0) {
         return(-1);
     }
@@ -64,31 +66,41 @@ int tweetfile_parse (const char *fname) {
     buf = calloc(1024, sizeof(char));
     ASSERT_NULL_ARG(buf, -1, ENOMEM);
 
+    tweet = calloc(100000, sizeof(tweet_t));
+    ASSERT_NULL_ARG(tweet, -1, ENOMEM);
+
     while(tweetfile_readline(fd, &buf, 1024) > 0) {
         cur_line = buf;
-        line++;
-        if(__tweetline_get_uint16(&cur_line, &tweet.fnum)) {
+        if(__tweetline_get_uint16(&cur_line, &tweet[line].fnum)) {
             LOG_ERROR("fnum\n");
             continue;
         }
-        if(__tweetline_get_uint32(&cur_line, &tweet.lnum)) {
+        if(__tweetline_get_uint32(&cur_line, &tweet[line].lnum)) {
             LOG_ERROR("lnum\n");
             continue;
         }
-        if(__tweetline_get_month(&cur_line, &tweet.month)) {
+        if(__tweetline_get_month(&cur_line, &tweet[line].month)) {
             LOG_ERROR("month\n");
             continue;
         }
-        if(__tweetline_get_uint8(&cur_line, &tweet.day)) {
+        if(__tweetline_get_uint8(&cur_line, &tweet[line].day)) {
             LOG_ERROR("day\n");
             continue;
         }
-        memcpy(&tweet.text, cur_line, MAX_TWEET_LENGTH - 1);
-        tweet.text[MAX_TWEET_LENGTH] = 0;
-        if((tweet.hits = tweet_count_hits(cur_line, "YOU")) > 0)
-            tweet_print(stdout, &tweet);
+        if((tweet[line].hits = tweet_count_hits(cur_line, key)) < 0) {
+            continue;
+        }
+        memcpy(tweet[line].text, cur_line, MAX_TWEET_LENGTH - 1);
+        tweet[line].text[MAX_TWEET_LENGTH] = 0;
+        line++;
     }
-    return(0);
+    /* just temp */
+    qsort(tweet, 100000, sizeof(tweet_t), tweet_compare);
+    for(int i = 0 ; i < 100000 ; i++) {
+        if(!tweet[i].hits) continue;
+        tweet_print(stdout, &tweet[i]);
+    }
+    return(line);
 }
 
 /* Various Functions to deserialize the Strings in tweetline */

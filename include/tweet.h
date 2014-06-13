@@ -11,7 +11,7 @@
     #define PACKED
 #endif
 
-#define MAX_TWEET_LENGTH     32
+#define MAX_TWEET_LENGTH     11
 
 /* explicit Structs instead of weird Pointer Magic 
  * keeps the Code readable! */ 
@@ -25,8 +25,11 @@ struct __tweet {
 } PACKED; 
 typedef struct __tweet tweet_t;
 
-int tweet_compare(const tweet_t *, const tweet_t *);
-int tweet_count_hits(char *, char *);
+int tweet_compare(const void *, const void *);
 
 void tweet_print(FILE *, const tweet_t *);
+
+/* Input Functions */
+int tweetfile_parse(char *, char *);
+int tweet_count_hits(char *, char *);
 #endif /* __TWEET_SORTER_H__ */
