@@ -6,9 +6,9 @@ LDFLAGS	=	-lrt
 INCDIR	=	-I. -I./include/
 
 OBJDIR	=	obj
-BIN		=	mpi_sorter
+BIN		=	sort_local
 
-SRCS	=	mpi_sorter.c tweet.c mpi_master.c file_io.c 
+SRCS	=	sort_local.c 
 OBJS	:=	$(SRCS:.c=.o)
 OBJS	:=	$(addprefix $(OBJDIR)/,$(OBJS))
 
