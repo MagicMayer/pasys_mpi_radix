@@ -133,13 +133,59 @@ void writeOrderedTweets() {
   fclose(f);
 }
 
+void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
+	int		C[256];
+	int		i, j;
+
+	for (i=0; i<256; i++) C[i] = 0;
+	for (j=0; j<n; j++) C[A[j][h]]++;
+	for (i=1; i<256; i++) C[i] += C[i-1];
+	for (j=0; j<n; j++) {
+
+		/*Elemente werden vom kleinsten zum Größten eingefügt*/
+
+		B[C[A[j][h]]-1] = A[j];
+		C[A[j][h]]--;
+	}
+}
+
+/* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
+ * in ein Array A.
+ */
+void radixSort (unsigned char *A[], int n, int d) {
+	int		i, j;
+	unsigned char	*B[n];
+
+	/* Das erste Byte hat die höchste Wertigkeit.
+	 */
+	for (i=d-1; i>=5; i--) {
+
+		/* A wird in B sortiert */
+		countingSort (A, B, n, i);
+
+		/* B wird zurück nach A kopiert. */
+
+		for (j=0; j<n; j++) A[j] = B[j];
+	}
+	for (i = 0; i<5;i++)
+	{
+		printTweet(A[i]);
+		printf("\n");
+	}
+}
+
 int main(int argc, char** argv) {
+  int i;
+  unsigned char *Ap[TNUM];
+
   if (argc != 2) {
 	  fprintf(stderr, "please specify search key\n");
 	  exit(1);
   }
   readTweets(argv[1]);
-  qsort(TWEETS, TNUM, TSIZE, compare);
+  for (i=0; i<TNUM; i++) Ap[i] = &TWEETS[i*TSIZE];
+  radixSort(Ap, TNUM, TSIZE);
+ // qsort(TWEETS, TNUM, TSIZE, compare);
   writeOrderedTweets();
 }
 
