@@ -29,6 +29,8 @@ int tweet_compare(const void *, const void *);
 
 void tweet_print(FILE *, const tweet_t *);
 
+void radixSort (unsigned char *A[], int n, int d);
+
 /* Input Functions */
 int tweetfile_parse(char *, char *);
 int tweet_count_hits(char *, char *);

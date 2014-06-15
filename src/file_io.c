@@ -95,14 +95,52 @@ int tweetfile_parse (char *fname, char *key) {
         line++;
     }
     /* just temp */
-    qsort(tweet, 100000, sizeof(tweet_t), tweet_compare);
-    for(int i = 0 ; i < 100000 ; i++) {
+    //qsort(tweet, 100000, sizeof(tweet_t), tweet_compare);
+	int i;
+	unsigned char *Ap[10000];
+    for (i=0; i<10000; i++) Ap[i] = &tweet[i*sizeof(tweet_t)];
+    radixSort(Ap,10000,sizeof(tweet_t));
+    for(int i = 0 ; i < 10000 ; i++) {
         if(!tweet[i].hits) continue;
         tweet_print(stdout, &tweet[i]);
     }
     return(line);
 }
+void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
+	int		C[256];
+	int		i, j;
 
+	for (i=0; i<256; i++) C[i] = 0;
+	for (j=0; j<n; j++) C[A[j][h]]++;
+	for (i=1; i<256; i++) C[i] += C[i-1];
+	for (j=0; j<n; j++) {
+
+		/*Elemente werden vom kleinsten zum Größten eingefügt*/
+
+		B[C[A[j][h]]-1] = A[j];
+		C[A[j][h]]--;
+	}
+}
+
+/* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
+ * in ein Array A.
+ */
+void radixSort (unsigned char *A[], int n, int d) {
+	int		i, j;
+	unsigned char	*B[n];
+
+	/* Das erste Byte hat die höchste Wertigkeit.
+	 */
+	for (i=d-1; i>=5; i--) {
+
+		/* A wird in B sortiert */
+		countingSort (A, B, n, i);
+
+		/* B wird zurück nach A kopiert. */
+
+		for (j=0; j<n; j++) A[j] = B[j];
+	}
+}
 /* Various Functions to deserialize the Strings in tweetline */
 int8_t __tweetline_get_string(char **lbuf, char **string) {
     ASSERT_NULL_ARG(lbuf, -1, EINVAL);
