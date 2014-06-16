@@ -25,6 +25,10 @@ struct __tweet {
 } PACKED; 
 typedef struct __tweet tweet_t;
 
+tweet_t *twcache_get_next_slot(void);
+int twcache_finalize_record(void);
+void twcache_print_all(void);
+
 int tweet_compare(const void *, const void *);
 
 void tweet_print(FILE *, const tweet_t *);

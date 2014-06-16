@@ -8,7 +8,7 @@ INCDIR	=	-I. -I./include/
 OBJDIR	=	obj
 BIN		=	mpi_sorter
 
-SRCS	=	mpi_sorter.c tweet.c mpi_master.c file_io.c 
+SRCS	=	mpi_sorter.c tweet.c mpi_master.c file_io.c caching.c
 OBJS	:=	$(SRCS:.c=.o)
 OBJS	:=	$(addprefix $(OBJDIR)/,$(OBJS))
 

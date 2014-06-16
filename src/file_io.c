@@ -66,39 +66,32 @@ int tweetfile_parse (char *fname, char *key) {
     buf = calloc(1024, sizeof(char));
     ASSERT_NULL_ARG(buf, -1, ENOMEM);
 
-    tweet = calloc(100000, sizeof(tweet_t));
-    ASSERT_NULL_ARG(tweet, -1, ENOMEM);
-
     while(tweetfile_readline(fd, &buf, 1024) > 0) {
         cur_line = buf;
-        if(__tweetline_get_uint16(&cur_line, &tweet[line].fnum)) {
+        tweet = twcache_get_next_slot();
+        if(__tweetline_get_uint16(&cur_line, &tweet->fnum)) {
             LOG_ERROR("fnum\n");
             continue;
         }
-        if(__tweetline_get_uint32(&cur_line, &tweet[line].lnum)) {
+        if(__tweetline_get_uint32(&cur_line, &tweet->lnum)) {
             LOG_ERROR("lnum\n");
             continue;
         }
-        if(__tweetline_get_month(&cur_line, &tweet[line].month)) {
+        if(__tweetline_get_month(&cur_line, &tweet->month)) {
             LOG_ERROR("month\n");
             continue;
         }
-        if(__tweetline_get_uint8(&cur_line, &tweet[line].day)) {
+        if(__tweetline_get_uint8(&cur_line, &tweet->day)) {
             LOG_ERROR("day\n");
             continue;
         }
-        if((tweet[line].hits = tweet_count_hits(cur_line, key)) < 0) {
+        if((tweet->hits = tweet_count_hits(cur_line, key)) < 0) {
             continue;
         }
-        memcpy(tweet[line].text, cur_line, MAX_TWEET_LENGTH - 1);
-        tweet[line].text[MAX_TWEET_LENGTH] = 0;
+        memcpy(tweet->text, cur_line, MAX_TWEET_LENGTH - 1);
+        tweet->text[MAX_TWEET_LENGTH] = 0;
         line++;
-    }
-    /* just temp */
-    qsort(tweet, 100000, sizeof(tweet_t), tweet_compare);
-    for(int i = 0 ; i < 100000 ; i++) {
-        if(!tweet[i].hits) continue;
-        tweet_print(stdout, &tweet[i]);
+        twcache_finalize_record();
     }
     return(line);
 }

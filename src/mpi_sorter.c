@@ -9,6 +9,8 @@
 
 #include <tweet.h>
 
+extern void twcache_print_all(void);
+
 static char *progname = NULL;
 extern int mpi_init(void);
 
@@ -74,9 +76,11 @@ int main(int argc, char *argv[]) {
     if((parsed = tweetfile_parse(fname, key)) <= 0) {
         printf("Fehler\n");
     } else {
+        twcache_print_all();
         then = time((time_t *) 0);
         printf("%s: parsed %d Lines in %lus\n", progname, parsed, (then - now));
     }
+
 
     return(0);
 }
