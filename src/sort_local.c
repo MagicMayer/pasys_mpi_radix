@@ -18,7 +18,7 @@
 #define FOUT "/home/vk/workspace/Beleg/twitter.out2.0"
 
 #define TSIZE 32
-#define TNUM 10000
+#define TNUM 100000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 char TWEETS[TNUM*TSIZE];
@@ -137,12 +137,16 @@ void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
 	int		C[256];
 	int		i, j;
 
+	/* Array C wird mit 0 initialisiert. */
 	for (i=0; i<256; i++) C[i] = 0;
+	/* Alle gleichen Byetewerte werden gezählt. */
 	for (j=0; j<n; j++) C[A[j][h]]++;
+	/* Alle Bytewerte werden mit der Anzahl der Vorgänger Bytewerte aufsummiert. */
 	for (i=1; i<256; i++) C[i] += C[i-1];
-	for (j=0; j<n; j++) {
 
-		/*Elemente werden vom kleinsten zum Größten eingefügt*/
+	//for (j=0; j<n; j++) {
+	for (j=n-1; j>=0; j--) {
+		/*Elemente werden vom Kleinsten zum Größten eingefügt.???*/
 
 		B[C[A[j][h]]-1] = A[j];
 		C[A[j][h]]--;
@@ -158,16 +162,15 @@ void radixSort (unsigned char *A[], int n, int d) {
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
-	for (i=d-1; i>=5; i--) {
+	for (i=d-1; i>=0; i--) {
 
 		/* A wird in B sortiert */
 		countingSort (A, B, n, i);
 
 		/* B wird zurück nach A kopiert. */
-
 		for (j=0; j<n; j++) A[j] = B[j];
 	}
-	for (i = 0; i<5;i++)
+	for (i = n-1; i>=n-10;i--)
 	{
 		printTweet(A[i]);
 		printf("\n");
@@ -183,9 +186,10 @@ int main(int argc, char** argv) {
 	  exit(1);
   }
   readTweets(argv[1]);
-  for (i=0; i<TNUM; i++) Ap[i] = &TWEETS[i*TSIZE];
+  //Bei Null liegt bei uns das wichtigste Byte -> Überprüfen!
+  for (i=0; i<TNUM; i++) Ap[i] = &TWEETS[6+i*TSIZE];
   radixSort(Ap, TNUM, TSIZE);
- // qsort(TWEETS, TNUM, TSIZE, compare);
+  //qsort(TWEETS, TNUM, TSIZE, compare);
   writeOrderedTweets();
 }
 
