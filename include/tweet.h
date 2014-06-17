@@ -11,7 +11,7 @@
     #define PACKED
 #endif
 
-#define MAX_TWEET_LENGTH     11
+#define MAX_TWEET_LENGTH     23
 
 /* explicit Structs instead of weird Pointer Magic 
  * keeps the Code readable! */ 

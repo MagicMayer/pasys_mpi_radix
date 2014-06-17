@@ -17,58 +17,43 @@ int8_t __tweetline_get_uint16(char **, uint16_t *);
 int8_t __tweetline_get_uint8(char **, uint8_t *);
 int8_t __tweetline_get_month(char **, uint8_t *);
 
-int tweetfile_open (const char *fname) {
+FILE *tweetfile_open (const char *fname) {
     struct stat st;
-    int fd = -1;
-    ASSERT_NULL_ARG(fname, -1, EINVAL);
+    FILE *fd = NULL;
+    ASSERT_NULL_STRING(fname, NULL, EINVAL);
     if(stat(fname, &st) == -1) {
         LOG_ERROR("<error : %s> stat(2) failed: (%d) %s\n", __func__, errno, strerror(errno));
-        return(-1);
+        return(NULL);
     }
     if(!S_ISREG(st.st_mode)) {
         LOG_ERROR("<error : %s> %s is not a regular file\n", __func__, fname);
-        return(-1);
+        return(NULL);
     }
-    if((fd = open(fname, O_CLOEXEC | O_NONBLOCK)) == -1) {
-        LOG_ERROR("<error : %s> open(2) failed: (%d) %s\n", __func__, errno, strerror(errno));
-        return(-1);
+    if((fd = fopen64(fname, "rex")) == NULL) {
+        LOG_ERROR("<error : %s> fopen(3) failed: (%d) %s\n", __func__, errno, strerror(errno));
+        return(NULL);
     }
     return(fd);
 }
 
-size_t tweetfile_readline(int fd, char **buffer, size_t bsize) {
-    char *p;
-    unsigned char lb = 0; 
-    ASSERT_NULL_ARG(buffer, -1, EINVAL);
-    p = *buffer;
-    while(read(fd, &lb, 1) > 0) {
-        if((p - *buffer) >= bsize || lb == '\n') {
-            *(p++) = 0;
-            break;
-        }
-        *(p++) = (char) lb;
-    }
-    return((size_t) (p - *buffer));
-}
-
 int tweetfile_parse (char *fname, char *key) {
-    int fd = -1, line = 0;
-    char *buf = NULL, *cur_line = NULL; 
+    FILE *fd = NULL;
+    char *cur_line = NULL; 
+    char buffer[1024];
+    int line = 0;
     tweet_t *tweet = NULL;
     
     ASSERT_NULL_ARG(fname, -1, EINVAL);
     ASSERT_NULL_ARG(key, -1, EINVAL);
 
-    if((fd = tweetfile_open(fname)) <= 0) {
+    if((fd = tweetfile_open(fname)) == NULL) {
         return(-1);
     }
-
-    buf = calloc(1024, sizeof(char));
-    ASSERT_NULL_ARG(buf, -1, ENOMEM);
-
-    while(tweetfile_readline(fd, &buf, 1024) > 0) {
-        cur_line = buf;
+    
+    while(fgets(buffer, sizeof(buffer), fd)) { 
+        cur_line = buffer;
         tweet = twcache_get_next_slot();
+        ASSERT_NULL_ARG(tweet, line, ENOBUFS);
         if(__tweetline_get_uint16(&cur_line, &tweet->fnum)) {
             LOG_ERROR("fnum\n");
             continue;
@@ -93,6 +78,7 @@ int tweetfile_parse (char *fname, char *key) {
         line++;
         twcache_finalize_record();
     }
+    fclose(fd);
     return(line);
 }
 
