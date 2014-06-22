@@ -22,8 +22,7 @@
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 char TWEETS[TNUM*TSIZE];
-unsigned char *A[TNUM];
-unsigned char *B[TNUM];
+
 
 int readNumber(char** lptr) {
   char* ptr = *lptr;
@@ -158,8 +157,9 @@ void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
 /* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
  * in ein Array A.
  */
-void radixSort (unsigned char *A[],	unsigned char *B[], int n, int d) {
+void radixSort (unsigned char *A[],	int n, int d) {
 	int		i, j;
+    unsigned char **B = malloc(sizeof(unsigned char*)*n);
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
@@ -180,6 +180,8 @@ void radixSort (unsigned char *A[],	unsigned char *B[], int n, int d) {
 
 int main(int argc, char** argv) {
   int i , rank, processes, localTweets, firstLocalTweet;
+  unsigned char **A;
+
 
   if (argc != 2) {
 	  fprintf(stderr, "please specify search key\n");
@@ -191,9 +193,10 @@ int main(int argc, char** argv) {
   rank = 0;
   localTweets = TNUM/processes;
   firstLocalTweet = rank*localTweets;
+  A = malloc(sizeof(unsigned char*)*localTweets);
 
   for (i=0; i<localTweets; i++) A[i] = &TWEETS[firstLocalTweet+i*TSIZE];
-  radixSort(A, B, localTweets, TSIZE);
+  radixSort(A, localTweets, TSIZE);
   //qsort(TWEETS, TNUM, TSIZE, compare);
   writeOrderedTweets();
 }
