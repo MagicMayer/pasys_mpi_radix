@@ -14,14 +14,16 @@
 #include <string.h>
 // #include <mpi.h>
 
-#define FIN "/home/vk/workspace/Beleg/twitter.data.0"
-#define FOUT "/home/vk/workspace/Beleg/twitter.out2.0"
+#define FIN "/home/vk/workspace/Twitter/twitter.data.0"
+#define FOUT "/home/vk/workspace/Twitter/twitter.out2.0"
 
 #define TSIZE 32
 #define TNUM 100000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 char TWEETS[TNUM*TSIZE];
+unsigned char *A[TNUM];
+unsigned char *B[TNUM];
 
 int readNumber(char** lptr) {
   char* ptr = *lptr;
@@ -156,9 +158,8 @@ void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
 /* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
  * in ein Array A.
  */
-void radixSort (unsigned char *A[], int n, int d) {
+void radixSort (unsigned char *A[],	unsigned char *B[], int n, int d) {
 	int		i, j;
-	unsigned char	*B[n];
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
@@ -179,7 +180,6 @@ void radixSort (unsigned char *A[], int n, int d) {
 
 int main(int argc, char** argv) {
   int i , rank, processes, localTweets, firstLocalTweet;
-  unsigned char *Ap[TNUM];
 
   if (argc != 2) {
 	  fprintf(stderr, "please specify search key\n");
@@ -192,8 +192,8 @@ int main(int argc, char** argv) {
   localTweets = TNUM/processes;
   firstLocalTweet = rank*localTweets;
 
-  for (i=0; i<localTweets; i++) Ap[i] = &TWEETS[firstLocalTweet+i*TSIZE];
-  radixSort(Ap, localTweets, TSIZE);
+  for (i=0; i<localTweets; i++) A[i] = &TWEETS[firstLocalTweet+i*TSIZE];
+  radixSort(A, B, localTweets, TSIZE);
   //qsort(TWEETS, TNUM, TSIZE, compare);
   writeOrderedTweets();
 }
