@@ -162,7 +162,7 @@ void radixSort (unsigned char *A[], int n, int d) {
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
-	for (i=d-1; i>=0; i--) {
+	for (i=d-1; i>=6; i--) {
 
 		/* A wird in B sortiert */
 		countingSort (A, B, n, i);
@@ -178,7 +178,7 @@ void radixSort (unsigned char *A[], int n, int d) {
 }
 
 int main(int argc, char** argv) {
-  int i;
+  int i , rank, processes, localTweets, firstLocalTweet;
   unsigned char *Ap[TNUM];
 
   if (argc != 2) {
@@ -186,9 +186,14 @@ int main(int argc, char** argv) {
 	  exit(1);
   }
   readTweets(argv[1]);
-  //Bei Null liegt bei uns das wichtigste Byte -> Überprüfen!
-  for (i=0; i<TNUM; i++) Ap[i] = &TWEETS[6+i*TSIZE];
-  radixSort(Ap, TNUM, TSIZE);
+
+  processes = 1;
+  rank = 0;
+  localTweets = TNUM/processes;
+  firstLocalTweet = rank*localTweets;
+
+  for (i=0; i<localTweets; i++) Ap[i] = &TWEETS[firstLocalTweet+i*TSIZE];
+  radixSort(Ap, localTweets, TSIZE);
   //qsort(TWEETS, TNUM, TSIZE, compare);
   writeOrderedTweets();
 }
