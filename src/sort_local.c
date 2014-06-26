@@ -14,11 +14,11 @@
 #include <string.h>
 // #include <mpi.h>
 
-#define FIN "/home/vk/workspace/Twitter/twitter.data.0"
+#define FIN "/home/vk/workspace/Twitter/twitter.data.gross"
 #define FOUT "/home/vk/workspace/Twitter/twitter.out2.0"
 
 #define TSIZE 32
-#define TNUM 10000
+#define TNUM 24000000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 char TWEETS[TNUM*TSIZE];
@@ -109,8 +109,8 @@ void readTweets(const char* key) {
 
 int compare(const void* ptr1, const void* ptr2) {
 	int i;
-	char* t1 = (char*) ptr1;
-	char* t2 = (char*) ptr2;
+	unsigned char* t1 = (unsigned char*) ptr1;
+	unsigned char* t2 = (unsigned char*) ptr2;
 	for (i=6; i<TSIZE; i++) {
 		if (t1[i] > t2[i]) return -1;
 		if (t2[i] > t1[i]) return 1;
@@ -127,7 +127,7 @@ void writeOrderedTweets() {
     int* lnp = (int*) (tweet+2);
     fprintf(f, "%d %d\n", *fnp, *lnp);
   }
-  for (i=0, tweet=TWEETS; i<10; i++, tweet+=TSIZE) {
+  for (i=0, tweet=TWEETS+TSIZE*(TNUM-20); i<20; i++, tweet+=TSIZE) {
 	  printTweet(tweet);
 	  printf("\n");
   }
@@ -193,11 +193,11 @@ int main(int argc, char** argv) {
   rank = 0;
   localTweets = TNUM/processes;
   firstLocalTweet = rank*localTweets;
-  A = malloc(sizeof(unsigned char*)*localTweets);
+  /*A = malloc(sizeof(unsigned char*)*localTweets);
 
   for (i=0; i<localTweets; i++) A[i] = &TWEETS[firstLocalTweet+i*TSIZE];
-  radixSort(A, localTweets, TSIZE);
-  //qsort(TWEETS, TNUM, TSIZE, compare);
+  radixSort(A, localTweets, TSIZE);*/
+  qsort(TWEETS, TNUM, TSIZE, compare);
   writeOrderedTweets();
 }
 
