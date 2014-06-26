@@ -12,25 +12,26 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-// #include <mpi.h>
+#include <mpi.h>
+#include <time.h>
 
-#define FIN "/home/vk/workspace/Twitter/twitter.data.0"
-#define FOUT "/home/vk/workspace/Twitter/twitter.out2.0"
+#define FIN "/home/vk/workspace/Twitter/twitter.data.gross"
+#define FOUT "/home/vk/workspace/Twitter/twitter.out.app"
 
 #define TSIZE 32
-#define TNUM 10000
+#define TNUM 24000000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 char TWEETS[TNUM*TSIZE];
 
 
 int readNumber(char** lptr) {
-  char* ptr = *lptr;
-  char* line = *lptr;
-  while (*ptr != ' ') ptr++;
-  *ptr = 0;
-  *lptr = ptr+1;
-  return atoi(line);
+	char* ptr = *lptr;
+	char* line = *lptr;
+	while (*ptr != ' ') ptr++;
+	*ptr = 0;
+	*lptr = ptr+1;
+	return atoi(line);
 }
 
 int readMonth(char** lptr) {
@@ -48,15 +49,15 @@ int readMonth(char** lptr) {
 }
 
 int countHits(const char* line, const char* key) {
-  int n = strlen(key);
-  int k = strlen(line) - n;
-  int i;
-  int hits = 0;
-  for (i=0; i<k; i++, line++)
-	  if (*line == *key)
-		  if (strncmp(line, key, n) == 0)
-			  hits++;
-  return hits;
+	int n = strlen(key);
+	int k = strlen(line) - n;
+	int i;
+	int hits = 0;
+	for (i=0; i<k; i++, line++)
+		if (*line == *key)
+			if (strncmp(line, key, n) == 0)
+				hits++;
+	return hits;
 }
 
 void printTweet(const char* t) {
@@ -71,40 +72,40 @@ void printTweet(const char* t) {
 
 void writeTweet(char* tweet, const int fn, const int ln, const int hits,
 		const int month, const int day, char* line) {
-  short* ptr1 = (short*) tweet;
-  *ptr1 = (short) fn;
-  int* ptr2 = (int*) (tweet+2);
-  *ptr2 = ln;
-  *(tweet+6) = (char) hits;
-  *(tweet+7) = (char) month;
-  *(tweet+8) = (char) day;
-  int i;
-  int n = TSIZE-9;
-  for (i=strlen(line); i<n; i++) line[i] = ' '; // padding
-  memcpy(tweet+9, line, n);
-//  printTweet(tweet); printf("\n");
+	short* ptr1 = (short*) tweet;
+	*ptr1 = (short) fn;
+	int* ptr2 = (int*) (tweet+2);
+	*ptr2 = ln;
+	*(tweet+6) = (char) hits;
+	*(tweet+7) = (char) month;
+	*(tweet+8) = (char) day;
+	int i;
+	int n = TSIZE-9;
+	for (i=strlen(line); i<n; i++) line[i] = ' '; // padding
+	memcpy(tweet+9, line, n);
+	//  printTweet(tweet); printf("\n");
 }
 
 void readTweets(const char* key) {
-  FILE* f = fopen(FIN, "r");
-  if (f == NULL) fprintf(stderr, "open failed: %s\n", FIN);
-  int i;
-  char buffer[1024];
-  char* tweet;
-  for (i=0, tweet=TWEETS; i<TNUM; i++, tweet+=TSIZE) {
-	char* line = fgets(buffer, 1024, f);
-    if (line == NULL) {
-    	fprintf(stderr, "error reading line %d\n", i);
-    	exit(2);
-    }
-    int fn = readNumber(&line);
-    int ln = readNumber(&line);
-    int month = readMonth(&line);
-    int day = readNumber(&line);
-    int hits = countHits(line, key);
-    writeTweet(tweet, fn, ln, hits, month, day, line);
-  }
-  fclose(f);
+	FILE* f = fopen(FIN, "r");
+	if (f == NULL) fprintf(stderr, "open failed: %s\n", FIN);
+	int i;
+	char buffer[1024];
+	char* tweet;
+	for (i=0, tweet=TWEETS; i<TNUM; i++, tweet+=TSIZE) {
+		char* line = fgets(buffer, 1024, f);
+		if (line == NULL) {
+			fprintf(stderr, "error reading line %d\n", i);
+			exit(2);
+		}
+		int fn = readNumber(&line);
+		int ln = readNumber(&line);
+		int month = readMonth(&line);
+		int day = readNumber(&line);
+		int hits = countHits(line, key);
+		writeTweet(tweet, fn, ln, hits, month, day, line);
+	}
+	fclose(f);
 }
 
 int compare(const void* ptr1, const void* ptr2) {
@@ -118,20 +119,26 @@ int compare(const void* ptr1, const void* ptr2) {
 	return 0;
 }
 
-void writeOrderedTweets() {
-  FILE* f = fopen(FOUT, "w");
-  int i;
-  char* tweet;
-  for (i=0, tweet=TWEETS; i<TNUM; i++, tweet+=TSIZE) {
-    short* fnp = (short*) tweet;
-    int* lnp = (int*) (tweet+2);
-    fprintf(f, "%d %d\n", *fnp, *lnp);
-  }
-  for (i=0, tweet=TWEETS; i<10; i++, tweet+=TSIZE) {
-	  printTweet(tweet);
-	  printf("\n");
-  }
-  fclose(f);
+void writeOrderedTweets(unsigned char **A) {
+	FILE* f = fopen(FOUT, "w");
+	int i;
+	char* tweet;
+	for (i=TNUM-1; i>=0; i--) {
+		short* fnp = (short*) A[i];
+		int* lnp = (int*) (A[i]+2);
+		fprintf(f, "%d %d\n", *fnp, *lnp);
+	}
+	printf("Last:\n");
+	for (i=0; i<20; i++) {
+		printTweet(A[i]);
+		printf("\n");
+	}
+	printf("First:\n");
+	for (i=TNUM-1; i>=TNUM-20; i--) {
+		printTweet(A[i]);
+		printf("\n");
+	}
+	fclose(f);
 }
 
 void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
@@ -159,7 +166,7 @@ void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
  */
 void radixSort (unsigned char *A[],	int n, int d) {
 	int		i, j;
-    unsigned char **B = malloc(sizeof(unsigned char*)*n);
+	unsigned char **B = malloc(sizeof(unsigned char*)*n);
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
@@ -171,33 +178,52 @@ void radixSort (unsigned char *A[],	int n, int d) {
 		/* B wird zurück nach A kopiert. */
 		for (j=0; j<n; j++) A[j] = B[j];
 	}
-	for (i = n-1; i>=n-10;i--)
-	{
-		printTweet(A[i]);
-		printf("\n");
-	}
 }
 
 int main(int argc, char** argv) {
-  int i , rank, processes, localTweets, firstLocalTweet;
-  unsigned char **A;
+	int i , rank, processes, localTweets, localTweetPointer;
+	float startTime, endTime, timeElapsed;
+	unsigned char **A;
 
 
-  if (argc != 2) {
-	  fprintf(stderr, "please specify search key\n");
-	  exit(1);
-  }
-  readTweets(argv[1]);
+	if (argc != 2) {
+		fprintf(stderr, "please specify search key\n");
+		exit(1);
+	}
+	readTweets(argv[1]);
 
-  processes = 1;
-  rank = 0;
-  localTweets = TNUM/processes;
-  firstLocalTweet = rank*localTweets;
-  A = malloc(sizeof(unsigned char*)*localTweets);
+	// initialize MPI environment and obtain basic info
+	MPI_Init(&argc, &argv);
 
-  for (i=0; i<localTweets; i++) A[i] = &TWEETS[firstLocalTweet+i*TSIZE];
-  radixSort(A, localTweets, TSIZE);
-  //qsort(TWEETS, TNUM, TSIZE, compare);
-  writeOrderedTweets();
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &processes);
+
+	printf("Rank: %d, Number of processes: %d\n",rank, processes);
+	localTweets = TNUM/processes;
+	localTweetPointer = rank*localTweets*TSIZE;
+	A = malloc(sizeof(unsigned char*)*localTweets);
+	printf("localTweetPointer= %d, Number of local Tweets %d \n",localTweetPointer,localTweets);
+	for (i=0; i<localTweets; i++) A[i] = &TWEETS[localTweetPointer+i*TSIZE];
+
+	// alle Prozesse werden hier synchronisiert
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	startTime = (float)clock()/CLOCKS_PER_SEC;
+	radixSort(A, localTweets, TSIZE);
+	endTime = (float)clock()/CLOCKS_PER_SEC;
+	timeElapsed = endTime - startTime;
+
+	printf("Time elapsed: %f\n",timeElapsed);
+	if (rank == 1) {
+		for (i = localTweets-1; i>=localTweets-10;i--)
+		{
+			printf("Rank%d: ",rank);
+			printTweet(A[i]);
+			printf("\n");
+		}
+	}
+	MPI_Finalize();
+	//qsort(TWEETS, TNUM, TSIZE, compare);
+	writeOrderedTweets(A);
 }
 
