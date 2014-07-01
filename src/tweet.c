@@ -22,11 +22,11 @@ int tweet_compare(const void *tw1, const void *tw2) {
     return(strncmp(t2->text, t1->text, MAX_TWEET_LENGTH));    
 }
 
-int tweet_compare_binary(const tweet_t *tw1, const tweet_t *tw2) {
-    ASSERT_NULL_ARG(tw1, 0, EINVAL);
-    ASSERT_NULL_ARG(tw2, 0, EINVAL);
-    char *t1_base = (char *) tw1;
-    char *t2_base = (char *) tw2;
+int tweet_compare_binary(const void *v1, const void *v2) {
+    ASSERT_NULL_ARG(v1, 0, EINVAL);
+    ASSERT_NULL_ARG(v2, 0, EINVAL);
+    char *t1_base = (char *) v1;
+    char *t2_base = (char *) v2;
     for(int i = 0 ; i < sizeof(tweet_t) ; i++) {
         if(*(t2_base + i) != *(t1_base + i)) 
             return(*(t2_base + i) - *(t1_base + i));
@@ -38,7 +38,7 @@ int tweet_count_hits(char *text, char *key) {
     register int hits = 0, len = strlen(key);
     ASSERT_NULL_STRING(text, -1, EINVAL);
     ASSERT_NULL_STRING(key, -1, EINVAL);
-    for(char *tmp = text ; *tmp != 0 && (tmp = strcasestr(tmp, key)) != NULL ; tmp += len) {
+    for(char *tmp = text ; *tmp != 0 && (tmp = strstr(tmp, key)) != NULL ; tmp += len) {
         hits++;
     }
     return(hits);

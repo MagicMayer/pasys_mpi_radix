@@ -1,14 +1,15 @@
+# CC		=	/usr/lib64/openmpi/bin/mpicc
 CC		=	mpicc
 CFLAGS	=	-pipe -g3 -ggdb -m64 -std=gnu99 -fopenmp -Wall -Wshadow \
 			-Wpointer-arith -Wformat-security -Wclobbered -Wcast-align
-PFLAGS	=	-D_FORTIFY_SOURCE=2 -D_GNU_SOURCE 
+PFLAGS	=	-D_GNU_SOURCE 
 LDFLAGS	=	-lrt
 INCDIR	=	-I. -I./include/
 
 OBJDIR	=	obj
 BIN		=	mpi_sorter
 
-SRCS	=	mpi_sorter.c tweet.c mpi_master.c file_io.c caching.c
+SRCS	=	mpi_sorter.c tweet.c pasys_mpi.c file_io.c caching.c
 OBJS	:=	$(SRCS:.c=.o)
 OBJS	:=	$(addprefix $(OBJDIR)/,$(OBJS))
 

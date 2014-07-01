@@ -29,11 +29,12 @@ tweet_t *twcache_get_next_slot(void);
 int twcache_finalize_record(void);
 void twcache_print_all(void);
 
+int tweet_compare_binary(const void *, const void *);
 int tweet_compare(const void *, const void *);
 
 void tweet_print(FILE *, const tweet_t *);
 
 /* Input Functions */
-int tweetfile_parse(char *, char *);
+int tweetfile_parse(char *, char *, off_t, off_t);
 int tweet_count_hits(char *, char *);
 #endif /* __TWEET_SORTER_H__ */

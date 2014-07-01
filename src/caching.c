@@ -61,12 +61,8 @@ int twcache_finalize_record(void) {
 }
 
 void twcache_print_all(void) {
-#if DEBUG
-    for(int i = 0 ; i <= _elems ; i++) {
-        tweet_print(stdout, (_tw_cache+i));
-    }
-#endif
-    fprintf(stdout, "Max Tweet: \n");
-    tweet_print(stdout, _tw_maxelem);
+    (void) qsort(_tw_cache, (_elems - 1), sizeof(tweet_t), tweet_compare);
+    tweet_print(stdout, &_tw_cache[0]);
+    tweet_print(stdout, &_tw_cache[_elems - 1]);
     fprintf(stdout, "Elements in Cache: %lu / Allocated Elements: %lu\n", _elems, _alloc_elems);
 }

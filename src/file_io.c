@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -36,11 +37,12 @@ FILE *tweetfile_open (const char *fname) {
     return(fd);
 }
 
-int tweetfile_parse (char *fname, char *key) {
+int tweetfile_parse (char *fname, char *key, off_t start, off_t end) {
     FILE *fd = NULL;
     char *cur_line = NULL; 
     char buffer[1024];
-    int line = 0;
+    int line = 0, parsed = 0;
+    bool with_offset = ((start | end) > 0) ? true : false;
     tweet_t *tweet = NULL;
     
     ASSERT_NULL_ARG(fname, -1, EINVAL);
@@ -49,37 +51,38 @@ int tweetfile_parse (char *fname, char *key) {
     if((fd = tweetfile_open(fname)) == NULL) {
         return(-1);
     }
+
+    if(with_offset)
+        fprintf(stdout, "Reading File '%s' with Offset: start(%lu) end(%lu)\n", fname, start, end);
     
     while(fgets(buffer, sizeof(buffer), fd)) { 
+        if(with_offset) {
+            line++;
+            if(line < start)
+                continue;
+            if(line > end)
+                break;
+        }
         cur_line = buffer;
         tweet = twcache_get_next_slot();
         ASSERT_NULL_ARG(tweet, line, ENOBUFS);
-        if(__tweetline_get_uint16(&cur_line, &tweet->fnum)) {
-            LOG_ERROR("fnum\n");
+        if(__tweetline_get_uint16(&cur_line, &tweet->fnum)) 
             continue;
-        }
-        if(__tweetline_get_uint32(&cur_line, &tweet->lnum)) {
-            LOG_ERROR("lnum\n");
+        if(__tweetline_get_uint32(&cur_line, &tweet->lnum))
             continue;
-        }
-        if(__tweetline_get_month(&cur_line, &tweet->month)) {
-            LOG_ERROR("month\n");
+        if(__tweetline_get_month(&cur_line, &tweet->month))
             continue;
-        }
-        if(__tweetline_get_uint8(&cur_line, &tweet->day)) {
-            LOG_ERROR("day\n");
+        if(__tweetline_get_uint8(&cur_line, &tweet->day))
             continue;
-        }
-        if((tweet->hits = tweet_count_hits(cur_line, key)) < 0) {
+        if((tweet->hits = tweet_count_hits(cur_line, key)) < 0)
             continue;
-        }
         memcpy(tweet->text, cur_line, MAX_TWEET_LENGTH - 1);
         tweet->text[MAX_TWEET_LENGTH] = 0;
-        line++;
+        parsed++;
         twcache_finalize_record();
     }
     fclose(fd);
-    return(line);
+    return(parsed);
 }
 
 /* Various Functions to deserialize the Strings in tweetline */
