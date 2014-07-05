@@ -12,10 +12,7 @@
 #include <tweet.h>
 #include <pasys_mpi.h>
 
-extern int mpi_get_filenum(void);
 extern void twcache_print_all(void);
-extern int mpi_init(void);
-extern void mpi_done();
 
 extern int opterr;
 extern char *optarg;
@@ -93,7 +90,7 @@ int main(int argc, char *argv[]) {
         __mode = PASYS_BENCH_2;
     }
 
-    if(mpi_init()) {
+    if(pasys_init()) {
         fprintf(stderr, "%s: Failed to initialized MPI Cluster\n", progname);
         return(1);
     } else {

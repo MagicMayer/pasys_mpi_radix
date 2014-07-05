@@ -11,15 +11,18 @@
 
 #define MAX_FILES
 
-extern int verbose;
+#define LVL0_BUCKETS    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 
-int  _mpi_rank = -1;
-int  _mpi_size = -1;
-bool _mpi_init_done = false;
+extern int verbose;
+extern DistMode __mode; 
+
+int  _pasys_rank = -1;
+int  _pasys_size = -1;
+bool _pasys_init_done = false;
 
 MPI_Datatype TweetType; 
 
-int __mpi_tweett_marshallize(void) {
+int __pasys_tweett_marshallize(void) {
     MPI_Datatype types[] = { MPI_UNSIGNED_CHAR, MPI_UNSIGNED_CHAR, 
         MPI_UNSIGNED_CHAR, MPI_CHAR, MPI_UNSIGNED_SHORT, MPI_UNSIGNED };
     int blocks[] = { 1, 1, 1, MAX_TWEET_LENGTH + 1, 1, 1};
@@ -41,9 +44,9 @@ int __mpi_tweett_marshallize(void) {
     return(0);
 }
 
-int _mpi_init_master(void) {
-    if(_mpi_rank != 0) return(-1);
-    if((_mpi_size % 2)) return(-1);
+int _pasys_init_master(void) {
+    if(_pasys_rank != 0) return(-1);
+    if((_pasys_size % 2)) return(-1);
     int *buf = calloc(10, sizeof(int));
     int receive = 0;
     for(int i = 0 ; i < 10 ; i++) {
@@ -53,43 +56,43 @@ int _mpi_init_master(void) {
     return(0);
 }
 
-int _mpi_init_slave(void) {
+int _pasys_init_slave(void) {
     int recv;
-    if(!_mpi_rank) return(-1);
+    if(!_pasys_rank) return(-1);
     MPI_Scatter(NULL, 0, MPI_INT, &recv, 1, MPI_INT, 0, MPI_COMM_WORLD);
     return(0);
 }
 
-int mpi_init(void) {
-    if(_mpi_init_done)
+int pasys_init(void) {
+    if(_pasys_init_done)
         return(0);
     MPI_Init(NULL, NULL);
-    (void) MPI_Comm_rank(MPI_COMM_WORLD, &_mpi_rank);
-    (void) MPI_Comm_size(MPI_COMM_WORLD, &_mpi_size);
-    if(__mpi_tweett_marshallize()) return(-1);
-    switch(_mpi_rank) {
+    (void) MPI_Comm_rank(MPI_COMM_WORLD, &_pasys_rank);
+    (void) MPI_Comm_size(MPI_COMM_WORLD, &_pasys_size);
+    if(__pasys_tweett_marshallize()) return(-1);
+    switch(_pasys_rank) {
         case -1:
-            fprintf(stderr, "<%s> Invalid _mpi_rank %d\n", __func__, _mpi_rank);
+            fprintf(stderr, "<%s> Invalid _pasys_rank %d\n", __func__, _pasys_rank);
             break;
         case 0:
-            if(_mpi_init_master()) return(-1);
+            if(_pasys_init_master()) return(-1);
             break;
         default:
-            if(_mpi_init_slave()) return(-1);
+            if(_pasys_init_slave()) return(-1);
             break;
     }
-    _mpi_init_done = true;
+    _pasys_init_done = true;
     if(verbose)
-        printf("<%s> Setup done: rank(%d) size(%d)\n", __func__, _mpi_rank, _mpi_size);
+        printf("<%s> Setup done: rank(%d) size(%d)\n", __func__, _pasys_rank, _pasys_size);
     return(0);
 }
 
-int mpi_get_filenum(void) {
-    if(!_mpi_init_done) return(-1);
-    return(_mpi_rank);
+int pasys_get_filenum(void) {
+    if(!_pasys_init_done) return(-1);
+    return(_pasys_rank);
 }
 
-void mpi_done(void) {
-    if(!_mpi_init_done) return;
+void pasys_done(void) {
+    if(!_pasys_init_done) return;
     MPI_Finalize();
 }

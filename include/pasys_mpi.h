@@ -9,4 +9,8 @@ enum __dist_mode {
 };
 typedef enum __dist_mode DistMode; 
 
+pasys_init(void);
+pasys_done(void);
+
+pasys_get_filenum(void);
 #endif /* __pasys_mpi_h__ */
