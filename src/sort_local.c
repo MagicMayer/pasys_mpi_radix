@@ -19,7 +19,7 @@
 #define FOUT "/home/vk/workspace/Twitter/twitter.out.app"
 
 #define TSIZE 32
-#define TNUM 24000000
+#define TNUM 240000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 char TWEETS[TNUM*TSIZE];
