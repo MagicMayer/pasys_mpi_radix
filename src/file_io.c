@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -23,7 +24,7 @@ FILE *tweetfile_open (const char *fname) {
     FILE *fd = NULL;
     ASSERT_NULL_STRING(fname, NULL, EINVAL);
     if(stat(fname, &st) == -1) {
-        LOG_ERROR("<error : %s> stat(2) failed: (%d) %s\n", __func__, errno, strerror(errno));
+        LOG_ERROR("<error : %s> stat(2) %s failed: (%d) %s\n", __func__, fname, errno, strerror(errno));
         return(NULL);
     }
     if(!S_ISREG(st.st_mode)) {
@@ -42,7 +43,7 @@ int tweetfile_parse (char *fname, char *key, off_t start, off_t end) {
     char *cur_line = NULL; 
     char buffer[1024];
     int line = 0, parsed = 0;
-    bool with_offset = ((start | end) > 0) ? true : false;
+    bool with_offset = (start | end) ? true : false;
     tweet_t *tweet = NULL;
     
     ASSERT_NULL_ARG(fname, -1, EINVAL);
@@ -74,12 +75,12 @@ int tweetfile_parse (char *fname, char *key, off_t start, off_t end) {
             continue;
         if(__tweetline_get_uint8(&cur_line, &tweet->day))
             continue;
-        if((tweet->hits = tweet_count_hits(cur_line, key)) < 0)
+        if((tweet->hits = tweet_count_hits(cur_line, key)) == UCHAR_MAX)
             continue;
         memcpy(tweet->text, cur_line, MAX_TWEET_LENGTH - 1);
         tweet->text[MAX_TWEET_LENGTH] = 0;
-        parsed++;
-        twcache_finalize_record();
+        if(twcache_finalize_record() == 0)
+            parsed++;
     }
     fclose(fd);
     return(parsed);

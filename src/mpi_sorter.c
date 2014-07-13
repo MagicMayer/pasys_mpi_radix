@@ -10,7 +10,11 @@
 #include <mpi.h>
 
 #include <tweet.h>
+#include <radix.h>
 #include <pasys_mpi.h>
+
+#define BASEPATH    "/home/steffen/Studium/_aktuelles.Semester/M31.Prallel.Systems/Beleg"
+// #define BASEPATH    "/mpidata/parsys14/gross"
 
 extern void twcache_print_all(void);
 
@@ -37,11 +41,18 @@ static void print_usage(void) {
     print_version();
 }
 
+/* implicit ((noreturn)) labled */
+void terminate(int code) {
+    twcache_destroy();
+    pasys_done();
+    exit(code);
+}
+
 int main(int argc, char *argv[]) {
     char *key = NULL, fname[MAXPATHLEN + 1];
     off_t start = 0, end = 0;
     int opt = 0, parsed = 0;
-    time_t now, then;
+    time_t prog_start; 
 
     if((progname = strrchr(argv[0], '/')) != NULL) {
         progname++;
@@ -49,7 +60,6 @@ int main(int argc, char *argv[]) {
         progname = argv[0];
     }
 
-    now = time((time_t *) 0);
     opterr = 0; /* do not print getopt error messages */
     while((opt = getopt(argc, argv, "f:k:s:e:hv")) != -1) {
         switch(opt) {
@@ -100,26 +110,28 @@ int main(int argc, char *argv[]) {
 
     if(__mode == PASYS_BENCH_1 && (strlen(fname) <= 0 || !*fname)) {
         fprintf(stderr, "%s: Try to start Benchmark 1 without stated Filename!\n", progname);
-        goto stop_it;
+        terminate(-1);
+    } else if(__mode >= PASYS_BENCH_2) {
+        snprintf(fname, MAXPATHLEN, "%s/twitter.data.%d", BASEPATH, pasys_get_filenum());
+        if(verbose)
+            fprintf(stdout, "%s: Node(%d) handling file: %s\n", progname, pasys_get_rank(), fname);
     } else {
-        snprintf(fname, MAXPATHLEN, "/mpidata/parsys14/gross/twitter.data.%d", mpi_get_filenum());
+        fprintf(stderr, "%s: Unknown Mode %d\n", progname, __mode);
+        terminate(-1);
     }
 
-    parsed = tweetfile_parse(fname, key, start, end);
-    if(parsed <= 0) {
-        fprintf(stderr, "%s: Reading %s failed: (%d) %s\n", progname, fname, errno, strerror(errno));
-        goto stop_it;
-    }
-
+    prog_start = time(NULL);
     if((parsed = tweetfile_parse(fname, key, start, end)) <= 0) {
-        printf("fehler\n");
-    } else {
-        then = time((time_t *) 0);
-        printf("%s: parsed %d Lines in %lus\n", progname, parsed, (then - now));
-        twcache_print_all();
+        fprintf(stderr, "%s: failed to parse file '%s': (%d) %s\n", progname, fname, errno, 
+                strerror(errno));
+        terminate(-1);
     }
+    if(verbose)
+        fprintf(stdout, "Parsed %d Elements - took %02lu seconds\n", parsed, (time(NULL) - prog_start));
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    pasys_counter_sync();
+    twcache_print_all();
 
-stop_it:
-    mpi_done();
-    return(0);
+    terminate(0);
 }

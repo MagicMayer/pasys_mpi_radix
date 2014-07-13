@@ -25,16 +25,23 @@ struct __tweet {
 } PACKED; 
 typedef struct __tweet tweet_t;
 
-tweet_t *twcache_get_next_slot(void);
-int twcache_finalize_record(void);
-void twcache_print_all(void);
-
-int tweet_compare_binary(const void *, const void *);
-int tweet_compare(const void *, const void *);
-
-void tweet_print(FILE *, const tweet_t *);
+#define LVLHITS_BUCKETSIZE  256
+#define LVLMONTH_BUCKETSIZE  12
 
 /* Input Functions */
 int tweetfile_parse(char *, char *, off_t, off_t);
-int tweet_count_hits(char *, char *);
+uint8_t tweet_count_hits(char *, char *);
+
+/* caching Functions */
+tweet_t *twcache_get_next_slot(void);
+int twcache_finalize_record(void);
+void twcache_print_all(void);
+void twcache_destroy(void);
+
+/* basic Compare functions */
+int tweet_compare_binary(const void *, const void *);
+int tweet_compare(const void *, const void *);
+
+/* misc helper and service Functions */
+void tweet_print(FILE *, const tweet_t *);
 #endif /* __TWEET_SORTER_H__ */

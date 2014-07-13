@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <limits.h>
 #include <errno.h>
 
 #include <errors.h>
@@ -27,17 +29,17 @@ int tweet_compare_binary(const void *v1, const void *v2) {
     ASSERT_NULL_ARG(v2, 0, EINVAL);
     char *t1_base = (char *) v1;
     char *t2_base = (char *) v2;
-    for(int i = 0 ; i < sizeof(tweet_t) ; i++) {
+    for(unsigned i = 0 ; i < sizeof(tweet_t) ; i++) {
         if(*(t2_base + i) != *(t1_base + i)) 
             return(*(t2_base + i) - *(t1_base + i));
     }
     return(0);
 }
 
-int tweet_count_hits(char *text, char *key) {
+uint8_t tweet_count_hits(char *text, char *key) {
     register int hits = 0, len = strlen(key);
-    ASSERT_NULL_STRING(text, -1, EINVAL);
-    ASSERT_NULL_STRING(key, -1, EINVAL);
+    ASSERT_NULL_STRING(text, UCHAR_MAX, EINVAL);
+    ASSERT_NULL_STRING(key, UCHAR_MAX, EINVAL);
     for(char *tmp = text ; *tmp != 0 && (tmp = strstr(tmp, key)) != NULL ; tmp += len) {
         hits++;
     }

@@ -1,15 +1,15 @@
 # CC		=	/usr/lib64/openmpi/bin/mpicc
 CC		=	mpicc
-CFLAGS	=	-pipe -g3 -ggdb -m64 -std=gnu99 -fopenmp -Wall -Wshadow \
-			-Wpointer-arith -Wformat-security -Wclobbered -Wcast-align
-PFLAGS	=	-D_GNU_SOURCE 
-LDFLAGS	=	-lrt
+CFLAGS	=	-pipe -g3 -ggdb -m64 -std=c99 -fopenmp -Wall -Wextra \
+			-Wpedantic -Wshadow -Wpointer-arith -Wclobbered 
+PFLAGS	=	-D_GNU_SOURCE -D_XOPEN_SOURCE=600
+LDFLAGS	=	-lrt -lm 
 INCDIR	=	-I. -I./include/
 
 OBJDIR	=	obj
 BIN		=	mpi_sorter
 
-SRCS	=	mpi_sorter.c tweet.c pasys_mpi.c file_io.c caching.c
+SRCS	=	mpi_sorter.c tweet.c pasys_mpi.c file_io.c caching.c radix.c
 OBJS	:=	$(SRCS:.c=.o)
 OBJS	:=	$(addprefix $(OBJDIR)/,$(OBJS))
 
@@ -31,7 +31,7 @@ $(OBJDIR)/%.o : %.c
 	$(CC) $(PFLAGS) $(INCDIR) $(CFLAGS) -c $< -o $@
 
 $(BIN): $(OBJS)
-	$(CC) $(OBJS) -o $(BIN)
+	$(CC) $(OBJS) $(LDFLAGS) -fopenmp -o $(BIN)
 
 .PHONY: clean clean-all
 
