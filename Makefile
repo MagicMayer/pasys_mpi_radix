@@ -1,7 +1,7 @@
 # CC		=	/usr/lib64/openmpi/bin/mpicc
 CC		=	mpicc
 CFLAGS	=	-pipe -g3 -ggdb -m64 -std=c99 -fopenmp -Wall -Wextra \
-			-Wpedantic -Wshadow -Wpointer-arith -Wclobbered 
+			-Wshadow -Wpointer-arith -Wclobbered 
 PFLAGS	=	-D_GNU_SOURCE -D_XOPEN_SOURCE=600
 LDFLAGS	=	-lrt -lm 
 INCDIR	=	-I. -I./include/

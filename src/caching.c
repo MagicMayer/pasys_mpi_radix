@@ -41,7 +41,7 @@ tweet_t *twcache_get_next_slot(void) {
     if(!_tw_cache || _alloc_elems == 0) {
         if(__tweetcache_init(INIT_CHUNK_SIZE))
             return(NULL);
-    } else if(_elems > (_alloc_elems - 1)) {
+    } else if((_tw_current - _tw_cache) >= (_alloc_elems - 1)) {
         ptrdiff_t twmax_offset = _tw_maxelem - _tw_cache;
         _alloc_elems += REALLOC_CHUNK_SIZE;
         tweet_t *tw_tmp = realloc(_tw_cache, sizeof(tweet_t) * _alloc_elems); 

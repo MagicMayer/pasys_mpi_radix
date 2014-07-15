@@ -25,9 +25,6 @@ struct __tweet {
 } PACKED; 
 typedef struct __tweet tweet_t;
 
-#define LVLHITS_BUCKETSIZE  256
-#define LVLMONTH_BUCKETSIZE  12
-
 /* Input Functions */
 int tweetfile_parse(char *, char *, off_t, off_t);
 uint8_t tweet_count_hits(char *, char *);
