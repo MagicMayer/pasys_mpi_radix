@@ -18,7 +18,7 @@
 #define FOUT "/home/vk/workspace/Twitter/twitter.out2.0"
 
 #define TSIZE 32
-#define TNUM 24000000
+#define TNUM 240000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 char TWEETS[TNUM*TSIZE];
@@ -127,7 +127,11 @@ void writeOrderedTweets() {
     int* lnp = (int*) (tweet+2);
     fprintf(f, "%d %d\n", *fnp, *lnp);
   }
-  for (i=0, tweet=TWEETS+TSIZE*(TNUM-20); i<20; i++, tweet+=TSIZE) {
+//  for (i=0, tweet=TWEETS; i<20; i++, tweet+=TSIZE) {
+//	  printTweet(tweet);
+//	  printf("\n");
+//  }
+  for (i=0, tweet=TWEETS+TSIZE*(TNUM-1); i<20; i++, tweet-=TSIZE) {
 	  printTweet(tweet);
 	  printf("\n");
   }
@@ -157,24 +161,36 @@ void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
 /* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
  * in ein Array A.
  */
-void radixSort (unsigned char *A[],	int n, int d) {
-	int		i, j;
-    unsigned char **B = malloc(sizeof(unsigned char*)*n);
+void radixSort (unsigned char *A,	int n, int d) {
+	int		i, j, h;
+	int		C[256];
+    unsigned char *B = malloc(TSIZE*n);
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
-	for (i=d-1; i>=6; i--) {
+	for (h=d-1; h>=6; h--) {
 
-		/* A wird in B sortiert */
-		countingSort (A, B, n, i);
+		/* COUNTING SORT A wird in B sortiert */
+		/* Array C wird mit 0 initialisiert. */
+		for (i=0; i<256; i++) C[i] = 0;
+		/* Alle gleichen Byetewerte werden gezählt. */
+		for (j=0; j<n; j++) C[*(A+j*TSIZE+h)]++;
+		/* Alle Bytewerte werden mit der Anzahl der Vorgänger Bytewerte aufsummiert. */
+		for (i=1; i<256; i++) C[i] += C[i-1];
+
+		//for (j=0; j<n; j++) {
+		for (j=n-1; j>=0; j--) {
+			/*Elemente werden vom Kleinsten zum Größten eingefügt.???*/
+
+			int currentPosition = C[*(A+j*TSIZE+h)];
+			//printf("Current Character: %d,Position: %d\n",*(A+j*TSIZE+h),currentPosition);
+			memcpy(B+(currentPosition-1)*TSIZE,A+j*TSIZE,TSIZE);
+			C[*(A+j*TSIZE+h)]--;
+		}
 
 		/* B wird zurück nach A kopiert. */
-		for (j=0; j<n; j++) A[j] = B[j];
-	}
-	for (i = n-1; i>=n-10;i--)
-	{
-		printTweet(A[i]);
-		printf("\n");
+		//for (j=0; j<n; j++) A[j] = B[j];
+		memcpy(A,B,TSIZE*n);
 	}
 }
 
@@ -193,11 +209,11 @@ int main(int argc, char** argv) {
   rank = 0;
   localTweets = TNUM/processes;
   firstLocalTweet = rank*localTweets;
-  /*A = malloc(sizeof(unsigned char*)*localTweets);
+  A = malloc(sizeof(unsigned char*)*localTweets);
 
   for (i=0; i<localTweets; i++) A[i] = &TWEETS[firstLocalTweet+i*TSIZE];
-  radixSort(A, localTweets, TSIZE);*/
-  qsort(TWEETS, TNUM, TSIZE, compare);
+  radixSort(TWEETS, TNUM , TSIZE);
+  //qsort(TWEETS, TNUM, TSIZE, compare);
   writeOrderedTweets();
 }
 
