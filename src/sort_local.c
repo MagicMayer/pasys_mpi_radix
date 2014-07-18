@@ -21,7 +21,6 @@
 #define TNUM 240000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-char TWEETS[TNUM*TSIZE];
 
 
 int readNumber(char** lptr) {
@@ -69,7 +68,7 @@ void printTweet(const char* t) {
 	printf("]");
 }
 
-void writeTweet(char* tweet, const int fn, const int ln, const int hits,
+void writeTweet(unsigned char* tweet, const int fn, const int ln, const int hits,
 		const int month, const int day, char* line) {
   short* ptr1 = (short*) tweet;
   *ptr1 = (short) fn;
@@ -85,13 +84,21 @@ void writeTweet(char* tweet, const int fn, const int ln, const int hits,
 //  printTweet(tweet); printf("\n");
 }
 
-void readTweets(const char* key) {
+void readTweets(const char* key, unsigned char* localTweets, int startTweet, int numberOfLocalTweets) {
   FILE* f = fopen(FIN, "r");
   if (f == NULL) fprintf(stderr, "open failed: %s\n", FIN);
   int i;
   char buffer[1024];
-  char* tweet;
-  for (i=0, tweet=TWEETS; i<TNUM; i++, tweet+=TSIZE) {
+  unsigned char* tweet;
+
+  for (i=0; i<startTweet; i++) {
+	char* line = fgets(buffer, 1024, f);
+    if (line == NULL) {
+    	fprintf(stderr, "error reading line %d\n", i);
+    	exit(2);
+    }
+  }
+  for (i=startTweet, tweet=localTweets; i<startTweet+numberOfLocalTweets; i++, tweet+=TSIZE) {
 	char* line = fgets(buffer, 1024, f);
     if (line == NULL) {
     	fprintf(stderr, "error reading line %d\n", i);
@@ -102,6 +109,7 @@ void readTweets(const char* key) {
     int month = readMonth(&line);
     int day = readNumber(&line);
     int hits = countHits(line, key);
+    month = (hits << 4) + month;
     writeTweet(tweet, fn, ln, hits, month, day, line);
   }
   fclose(f);
@@ -118,11 +126,11 @@ int compare(const void* ptr1, const void* ptr2) {
 	return 0;
 }
 
-void writeOrderedTweets() {
+void writeOrderedTweets(unsigned char* localTweets, int numberOfLocalTweets) {
   FILE* f = fopen(FOUT, "w");
   int i;
-  char* tweet;
-  for (i=0, tweet=TWEETS; i<TNUM; i++, tweet+=TSIZE) {
+  unsigned char* tweet;
+  for (i=0, tweet=localTweets; i<numberOfLocalTweets; i++, tweet+=TSIZE) {
     short* fnp = (short*) tweet;
     int* lnp = (int*) (tweet+2);
     fprintf(f, "%d %d\n", *fnp, *lnp);
@@ -131,7 +139,7 @@ void writeOrderedTweets() {
 //	  printTweet(tweet);
 //	  printf("\n");
 //  }
-  for (i=0, tweet=TWEETS+TSIZE*(TNUM-1); i<20; i++, tweet-=TSIZE) {
+  for (i=0, tweet=localTweets+TSIZE*(numberOfLocalTweets-1); i<10; i++, tweet-=TSIZE) {
 	  printTweet(tweet);
 	  printf("\n");
   }
@@ -157,14 +165,63 @@ void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
 		C[A[j][h]]--;
 	}
 }
+/* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
+ * in ein Array A.
+ */
+void radixSortMPI (unsigned char *A,	int *n, int d, int rank) {
+	int		i, j, h;
+	int		Buckets[256],C[256];
+    unsigned char *B = malloc(TSIZE**n);
 
+	/* Das erste Byte hat die höchste Wertigkeit.
+	 */
+	for (h=7; h>=7; h--) {
+
+		/* COUNTING SORT A wird in B sortiert */
+		/* Array C wird mit 0 initialisiert. */
+		for (i=0; i<256; i++) C[i] = 0;
+		/* Alle gleichen Bytewerte werden gezählt. */
+		for (j=0; j<*n; j++) C[*(A+j*TSIZE+h)]++;
+		memcpy(Buckets,C,sizeof(int)*256);
+		/* Alle Bytewerte werden mit der Anzahl der Vorgänger Bytewerte aufsummiert. */
+		for (i=1; i<256; i++) C[i] += C[i-1];
+		//for (j=0; j<n; j++) {
+		for (j=*n-1; j>=0; j--) {
+			/*Elemente werden vom Kleinsten zum Größten eingefügt.???*/
+
+			int currentPosition = C[*(A+j*TSIZE+h)];
+			//printf("Current Character: %d,Position: %d\n",*(A+j*TSIZE+h),currentPosition);
+			memcpy(B+(currentPosition-1)*TSIZE,A+j*TSIZE,TSIZE);
+			C[*(A+j*TSIZE+h)]--;
+		}
+
+		/* B wird zurück nach A kopiert. */
+		//for (j=0; j<n; j++) A[j] = B[j];
+		int nextBucket = 0;
+		int count = 0;
+		for(int i = 0; i < 256; i++)
+		{
+			printf(" %d",Buckets[i]);
+			count = Buckets[i] + count;
+			if (count>*n/2*1.1)
+			{
+				printf("Send Bucket: %d bis %d , with %d Tweets.\n ",nextBucket, i, count);
+				nextBucket = i+1;
+				count = 0;
+			}
+
+		}
+		printf("Send Bucket: %d bis %d , with %d Tweets.\n ",nextBucket, 255, count);
+		memcpy(A,B,TSIZE**n);
+	}
+}
 /* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
  * in ein Array A.
  */
 void radixSort (unsigned char *A,	int n, int d) {
 	int		i, j, h;
 	int		C[256];
-    unsigned char *B = malloc(TSIZE*n);
+    unsigned char *B = malloc(TSIZE*n*2);
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
@@ -173,7 +230,7 @@ void radixSort (unsigned char *A,	int n, int d) {
 		/* COUNTING SORT A wird in B sortiert */
 		/* Array C wird mit 0 initialisiert. */
 		for (i=0; i<256; i++) C[i] = 0;
-		/* Alle gleichen Byetewerte werden gezählt. */
+		/* Alle gleichen Bytewerte werden gezählt. */
 		for (j=0; j<n; j++) C[*(A+j*TSIZE+h)]++;
 		/* Alle Bytewerte werden mit der Anzahl der Vorgänger Bytewerte aufsummiert. */
 		for (i=1; i<256; i++) C[i] += C[i-1];
@@ -195,25 +252,26 @@ void radixSort (unsigned char *A,	int n, int d) {
 }
 
 int main(int argc, char** argv) {
-  int i , rank, processes, localTweets, firstLocalTweet;
-  unsigned char **A;
+  int i , rank, processes, numberOfLocalTweets;
+  unsigned char *localTweets;
 
 
   if (argc != 2) {
 	  fprintf(stderr, "please specify search key\n");
 	  exit(1);
   }
-  readTweets(argv[1]);
 
-  processes = 1;
-  rank = 0;
-  localTweets = TNUM/processes;
-  firstLocalTweet = rank*localTweets;
-  A = malloc(sizeof(unsigned char*)*localTweets);
+  processes = 2;
+  rank = 1;
+  numberOfLocalTweets = TNUM/processes;
+  localTweets = (unsigned char*) malloc(TSIZE*TNUM*2);
 
-  for (i=0; i<localTweets; i++) A[i] = &TWEETS[firstLocalTweet+i*TSIZE];
-  radixSort(TWEETS, TNUM , TSIZE);
+  readTweets(argv[1],localTweets,numberOfLocalTweets*rank,numberOfLocalTweets);
+
+  radixSortMPI(localTweets, &numberOfLocalTweets , TSIZE, rank);
+
+  radixSort(localTweets, numberOfLocalTweets , TSIZE);
   //qsort(TWEETS, TNUM, TSIZE, compare);
-  writeOrderedTweets();
+  writeOrderedTweets(localTweets,numberOfLocalTweets);
 }
 
