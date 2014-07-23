@@ -12,13 +12,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-// #include <mpi.h>
+#include <mpi.h>
 
 #define FIN "/home/vk/workspace/Twitter/twitter.data.gross"
 #define FOUT "/home/vk/workspace/Twitter/twitter.out2."
 
 #define TSIZE 32
-#define TNUM 24
+#define TNUM 2400000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
@@ -174,10 +174,14 @@ void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
 /* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
  * in ein Array A.
  */
-void radixSortMPI (unsigned char *A,	int *n, int d, int rank) {
+void radixSortMPI (unsigned char *A,	int *n, int d, int rank, int processes) {
 	int		i, j, h;
-	int		Buckets[256],C[256];
+	int		localBuckets[256], globalBuckets[256],C[256];
 	unsigned char *B = malloc(TSIZE**n);
+
+	  // MPI request and status
+	  MPI_Request req;
+	  MPI_Status stat;
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
@@ -185,10 +189,13 @@ void radixSortMPI (unsigned char *A,	int *n, int d, int rank) {
 
 		/* COUNTING SORT A wird in B sortiert */
 		/* Array C wird mit 0 initialisiert. */
-		for (i=0; i<256; i++) C[i] = 0;
+		for (i=0; i<256; i++) {
+			C[i] = 0;
+			globalBuckets[i] = 0;
+		}
 		/* Alle gleichen Bytewerte werden gezählt. */
 		for (j=0; j<*n; j++) C[*(A+j*TSIZE+h)]++;
-		memcpy(Buckets,C,sizeof(int)*256);
+		memcpy(localBuckets,C,sizeof(int)*256);
 		/* Alle Bytewerte werden mit der Anzahl der Vorgänger Bytewerte aufsummiert. */
 		for (i=1; i<256; i++) C[i] += C[i-1];
 		//for (j=0; j<n; j++) {
@@ -200,24 +207,70 @@ void radixSortMPI (unsigned char *A,	int *n, int d, int rank) {
 			memcpy(B+(currentPosition-1)*TSIZE,A+j*TSIZE,TSIZE);
 			C[*(A+j*TSIZE+h)]--;
 		}
+	    for (int p = 0; p < processes; p++) {
+	      if (p != rank) {
+	        // send counts of this process to others
+	        MPI_Send(
+	        	localBuckets,
+	            256,
+	            MPI_INT,
+	            p,
+	            0,
+	            MPI_COMM_WORLD
+	            );
+	      }
+	    }
+	    // receive counts from others
+	    for (int p = 0; p < processes; p++) {
+	      if (p != rank) {
+	        MPI_Recv(
+	            C,
+	            256,
+	            MPI_INT,
+	            p,
+	            0,
+	            MPI_COMM_WORLD,
+	            &stat);
 
+	        // populate counts per bucket for other processes
+	        for (int i = 0; i < 256; i++) {
+	        	globalBuckets[i] += C[i];
+	        }
+	      }
+	      else{
+			for (int i = 0; i < 256; i++) {
+				globalBuckets[i] += localBuckets[i];
+			}
+	      }
+	    }
 		/* B wird zurück nach A kopiert. */
 		//for (j=0; j<n; j++) A[j] = B[j];
 		int nextBucket = 0;
-		int count = 0;
+		int globalCount = 0;
+		int localCount = 0;
+		int targetProcess = 0;
 		for(int i = 0; i < 256; i++)
 		{
-			printf(" %d",Buckets[i]);
-			count = Buckets[i] + count;
-			if (count>*n/2*1.1)
+			//printf(" %d",Buckets[i]);
+			globalCount = globalBuckets[i] + globalCount;
+			localCount = localCount + localBuckets[i];
+			if (globalCount>*n*1.1)
 			{
-				printf("Send Bucket: %d bis %d , with %d Tweets.\n ",nextBucket, i, count);
+				if(rank!=targetProcess)
+				{
+				printf("Rank%d sends Bucket: %d bis %d , with %d Tweets to %d\n ",rank,nextBucket, i, localCount,targetProcess);
+				}
+				targetProcess += 1;
 				nextBucket = i+1;
-				count = 0;
+				globalCount = 0;
+				localCount = 0;
 			}
 
 		}
-		printf("Send Bucket: %d bis %d , with %d Tweets.\n ",nextBucket, 255, count);
+		if(rank!=targetProcess)
+		{
+		printf("Rank%d sends Bucket: %d bis %d , with %d Tweets to %d.\n ",rank,nextBucket, 255, localCount,targetProcess);
+		}
 		memcpy(A,B,TSIZE**n);
 	}
 }
@@ -262,22 +315,27 @@ int main(int argc, char** argv) {
 	unsigned char *localTweets;
 
 
+	  // initialize MPI environment and obtain basic info
+	  MPI_Init(&argc, &argv);
+
+	  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	  MPI_Comm_size(MPI_COMM_WORLD, &processes);
+
 	if (argc != 2) {
 		fprintf(stderr, "please specify search key\n");
 		exit(1);
 	}
 
-	processes = 2;
-	rank = 1;
 	numberOfLocalTweets = TNUM/processes;
 	localTweets = (unsigned char*) malloc(TSIZE*TNUM*2);
 
 	readTweets(argv[1],localTweets,numberOfLocalTweets*rank,numberOfLocalTweets);
 
-	radixSortMPI(localTweets, &numberOfLocalTweets , TSIZE, rank);
+	radixSortMPI(localTweets, &numberOfLocalTweets , TSIZE, rank, processes);
 
 	radixSort(localTweets, numberOfLocalTweets , TSIZE);
 	//qsort(TWEETS, TNUM, TSIZE, compare);
 	writeOrderedTweets(localTweets,numberOfLocalTweets,rank);
+    MPI_Finalize();
 }
 
