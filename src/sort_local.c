@@ -14,7 +14,7 @@
 #include <string.h>
 #include <mpi.h>
 
-#define FIN "/mpidata/parsys14/gross/twitter.data.0"
+#define FIN "/mpidata/parsys14/gross/twitter.data."
 #define FOUT "/mpidata/ergebnisse/g15_twitter.data.out."
 
 #define TSIZE 32
@@ -84,8 +84,14 @@ void writeTweet(unsigned char* tweet, const int fn, const int ln, const int hits
 	//  printTweet(tweet); printf("\n");
 }
 
-void readTweets(const char* key, unsigned char* localTweets, int startTweet, int numberOfLocalTweets) {
-	FILE* f = fopen(FIN, "r");
+void readTweets(const char* key, unsigned char* localTweets, int startTweet, int numberOfLocalTweets, int rank) {
+        char extension[15];
+        sprintf(extension, "%d", rank);
+        char* fileName;
+        fileName = malloc(strlen(FIN)+15); /* make space for the new string (should check the return value ...) */
+        strcpy(fileName, FIN); /* copy name into the new var */
+        strcat(fileName, extension);	
+	FILE* f = fopen(fileName, "r");
 	if (f == NULL) fprintf(stderr, "open failed: %s\n", FIN);
 	int i;
 	char buffer[1024];
@@ -161,7 +167,7 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 	int		localBuckets[256],C[256];
 	int    *globalBuckets = malloc(sizeof(int)*processes*256);
 	int    *processBuckets = malloc(sizeof(int)*processes);
-	unsigned char *B = malloc(TSIZE**n*2);
+	unsigned char *B = malloc(TSIZE**n*1.2);
 
 	MPI_Request req;
 	MPI_Status stat;
@@ -313,7 +319,7 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 void radixSort (unsigned char *A,	int n, int d) {
 	int		i, j, h;
 	int		C[256];
-	unsigned char *B = malloc(TSIZE*n*2);
+	unsigned char *B = malloc(TSIZE*n*1.2);
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
@@ -359,17 +365,20 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	numberOfLocalTweets = TNUM/processes;
-	localTweets = (unsigned char*) malloc(TSIZE*TNUM*2);
+	numberOfLocalTweets = TNUM;//processes;
+	localTweets = (unsigned char*) malloc(TSIZE*TNUM*1.2);
 	start = MPI_Wtime();
-	readTweets(argv[1],localTweets,numberOfLocalTweets*rank,numberOfLocalTweets);
+//	readTweets(argv[1],localTweets,numberOfLocalTweets*rank,numberOfLocalTweets,rank);
+	
+	readTweets(argv[1],localTweets,numberOfLocalTweets*0,numberOfLocalTweets,rank);
 	MPI_Barrier(MPI_COMM_WORLD);
 	r_time = MPI_Wtime();
 	radixSortMPI(localTweets, &numberOfLocalTweets , TSIZE, rank, processes);
 
 	radixSort(localTweets, numberOfLocalTweets , TSIZE);
-	MPI_Barrier(MPI_COMM_WORLD);
+
 	s_time = MPI_Wtime();
+	MPI_Barrier(MPI_COMM_WORLD);
 	//qsort(TWEETS, TNUM, TSIZE, compare);
 	writeOrderedTweets(localTweets,numberOfLocalTweets,rank);
 	end = MPI_Wtime();
