@@ -27,5 +27,6 @@ core.*
 
 # Files created during Build or Logs etc.
 mpi_sorter
+sort_local
 *.log
 *.pdf
