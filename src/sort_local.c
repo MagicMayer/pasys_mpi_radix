@@ -15,7 +15,7 @@
 #include <mpi.h>
 
 #define FIN "/mpidata/parsys14/gross/twitter.data.0"
-#define FOUT "/mpidata/ergebnisse/g15_twitter.data_MK.out"
+#define FOUT "/mpidata/ergebnisse/g15_twitter.data.out."
 
 #define TSIZE 32
 #define TNUM 24000000
@@ -137,7 +137,7 @@ void writeOrderedTweets(unsigned char* localTweets, int numberOfLocalTweets, int
 	if(!f) return;
 	int i;
 	unsigned char* tweet;
-	for (i=0, tweet=localTweets; i<numberOfLocalTweets; i++, tweet+=TSIZE) {
+	for (i=numberOfLocalTweets, tweet=localTweets+TSIZE*(numberOfLocalTweets-1); i>=0; i--, tweet-=TSIZE) {
 		short* fnp = (short*) tweet;
 		int* lnp = (int*) (tweet+2);
 		fprintf(f, "%d %d\n", *fnp, *lnp);
@@ -346,7 +346,7 @@ void radixSort (unsigned char *A,	int n, int d) {
 int main(int argc, char** argv) {
 	int i , rank, processes, numberOfLocalTweets;
 	unsigned char *localTweets;
-
+	double start, r_time, s_time, end;
 
 	  // initialize MPI environment and obtain basic info
 	  MPI_Init(&argc, &argv);
@@ -361,14 +361,22 @@ int main(int argc, char** argv) {
 
 	numberOfLocalTweets = TNUM/processes;
 	localTweets = (unsigned char*) malloc(TSIZE*TNUM*2);
-
+	start = MPI_Wtime();
 	readTweets(argv[1],localTweets,numberOfLocalTweets*rank,numberOfLocalTweets);
-
+	MPI_Barrier(MPI_COMM_WORLD);
+	r_time = MPI_Wtime();
 	radixSortMPI(localTweets, &numberOfLocalTweets , TSIZE, rank, processes);
 
 	radixSort(localTweets, numberOfLocalTweets , TSIZE);
+	MPI_Barrier(MPI_COMM_WORLD);
+	s_time = MPI_Wtime();
 	//qsort(TWEETS, TNUM, TSIZE, compare);
 	writeOrderedTweets(localTweets,numberOfLocalTweets,rank);
+	end = MPI_Wtime();
+	if(rank == 0)
+	{
+		printf("Gesamtzeit: %04.4f Sortierzeit: %04.4f\n",(end-start),(s_time-r_time));
+	}
     MPI_Finalize();
 }
 
