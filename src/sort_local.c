@@ -18,7 +18,7 @@
 #define FOUT "/home/vk/workspace/Twitter/twitter.out2."
 
 #define TSIZE 32
-#define TNUM 2400000
+#define TNUM 24000000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
@@ -190,7 +190,6 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 		}
 	    for (int p = 0; p < processes; p++) {
 	      if (p != rank) {
-	        // send counts of this process to others
 	        MPI_Send(
 	        	localBuckets,
 	            256,
@@ -201,7 +200,7 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 	            );
 	      }
 	    }
-	    // receive counts from others
+
 	    for (int p = 0; p < processes; p++) {
 	      if (p != rank) {
 	        MPI_Recv(
@@ -213,7 +212,6 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 	            MPI_COMM_WORLD,
 	            &stat);
 
-	        // populate counts per bucket for other processes
 	        for (int i = 0; i < 256; i++) {
 	        	*(globalBuckets + p*256 + i) = C[i];
 	        }
@@ -231,8 +229,14 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 		int targetProcess = 0;
 		unsigned char* currentBucket = B;
 		unsigned char* localBucket = B;
+
+		for (i= 0; i < processes;i++){
+			*(processBuckets + i) = 0;
+		}
+
 		for(int i = 0; i < 256; i++)
 		{
+			//Todo evtl prozesse rausnehmen
 			for(int j = 0; j < processes; j++)
 			{
 				globalCount = *(globalBuckets +j*256 + i) + globalCount;
@@ -282,7 +286,7 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 	      }
 	      printf("Rank%d receives %d Buckets from %d  pos %d Receive Size %d\n",rank,*(processBuckets+rank),p,nextBucket,receiveSize);
 	      nextBucket = 0;
-	      if (p != rank) {
+	      if (p != rank && receiveSize > 0) {
 	        MPI_Recv(
 	        	currentBucket,
 	        	receiveSize*TSIZE,
@@ -302,7 +306,7 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 	   // memcpy(A,B,TSIZE**n);
 	}
 }
-/* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
+/* Dieser Radixsort sortiert n Pointer auf Strings der Größe n
  * in ein Array A.
  */
 void radixSort (unsigned char *A,	int n, int d) {
@@ -312,7 +316,7 @@ void radixSort (unsigned char *A,	int n, int d) {
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
-	for (h=d-1; h>=6; h--) {
+	for (h=d-1; h>=7; h--) {
 
 		/* COUNTING SORT A wird in B sortiert */
 		/* Array C wird mit 0 initialisiert. */
