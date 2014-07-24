@@ -58,8 +58,8 @@ int countHits(const char* line, const char* key) {
 	return hits;
 }
 
-void printTweet(const char* t) {
-	printf("[");
+void printTweet(const char* t, int rank) {
+	printf("[Rank%d ",rank);
 	int i;
 	for (i=0; i<TSIZE; i++) {
 		int k = t[i];
@@ -146,42 +146,24 @@ void writeOrderedTweets(unsigned char* localTweets, int numberOfLocalTweets, int
 	//	  printf("\n");
 	//  }
 	for (i=0, tweet=localTweets+TSIZE*(numberOfLocalTweets-1); i<10; i++, tweet-=TSIZE) {
-		printTweet(tweet);
+		printTweet(tweet, rank);
 		printf("\n");
 	}
 	fclose(f);
 }
 
-void countingSort (unsigned char *A[], unsigned char *B[], int n, int h) {
-	int		C[256];
-	int		i, j;
-
-	/* Array C wird mit 0 initialisiert. */
-	for (i=0; i<256; i++) C[i] = 0;
-	/* Alle gleichen Byetewerte werden gezählt. */
-	for (j=0; j<n; j++) C[A[j][h]]++;
-	/* Alle Bytewerte werden mit der Anzahl der Vorgänger Bytewerte aufsummiert. */
-	for (i=1; i<256; i++) C[i] += C[i-1];
-
-	//for (j=0; j<n; j++) {
-	for (j=n-1; j>=0; j--) {
-		/*Elemente werden vom Kleinsten zum Größten eingefügt.???*/
-
-		B[C[A[j][h]]-1] = A[j];
-		C[A[j][h]]--;
-	}
-}
 /* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
  * in ein Array A.
  */
-void radixSortMPI (unsigned char *A,	int *n, int d, int rank, int processes) {
+void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 	int		i, j, h;
-	int		localBuckets[256], globalBuckets[256],C[256];
-	unsigned char *B = malloc(TSIZE**n);
+	int		localBuckets[256],C[256];
+	int    *globalBuckets = malloc(sizeof(int)*processes*256);
+	int    *processBuckets = malloc(sizeof(int)*processes);
+	unsigned char *B = malloc(TSIZE**n*2);
 
-	  // MPI request and status
-	  MPI_Request req;
-	  MPI_Status stat;
+	MPI_Request req;
+	MPI_Status stat;
 
 	/* Das erste Byte hat die höchste Wertigkeit.
 	 */
@@ -191,7 +173,6 @@ void radixSortMPI (unsigned char *A,	int *n, int d, int rank, int processes) {
 		/* Array C wird mit 0 initialisiert. */
 		for (i=0; i<256; i++) {
 			C[i] = 0;
-			globalBuckets[i] = 0;
 		}
 		/* Alle gleichen Bytewerte werden gezählt. */
 		for (j=0; j<*n; j++) C[*(A+j*TSIZE+h)]++;
@@ -234,44 +215,91 @@ void radixSortMPI (unsigned char *A,	int *n, int d, int rank, int processes) {
 
 	        // populate counts per bucket for other processes
 	        for (int i = 0; i < 256; i++) {
-	        	globalBuckets[i] += C[i];
+	        	*(globalBuckets + p*256 + i) = C[i];
 	        }
 	      }
 	      else{
 			for (int i = 0; i < 256; i++) {
-				globalBuckets[i] += localBuckets[i];
+				*(globalBuckets + p*256 + i) = localBuckets[i];
 			}
 	      }
 	    }
-		/* B wird zurück nach A kopiert. */
-		//for (j=0; j<n; j++) A[j] = B[j];
+
 		int nextBucket = 0;
 		int globalCount = 0;
 		int localCount = 0;
 		int targetProcess = 0;
+		unsigned char* currentBucket = B;
+		unsigned char* localBucket = B;
 		for(int i = 0; i < 256; i++)
 		{
-			//printf(" %d",Buckets[i]);
-			globalCount = globalBuckets[i] + globalCount;
-			localCount = localCount + localBuckets[i];
-			if (globalCount>*n*1.1)
+			for(int j = 0; j < processes; j++)
 			{
+				globalCount = *(globalBuckets +j*256 + i) + globalCount;
+			}
+			localCount = localCount + localBuckets[i];
+			if (globalCount>*n*1.1|| i == 255)
+			{
+				*(processBuckets + targetProcess) = i-nextBucket+1;//Anzahl der Buckets im Prozess
 				if(rank!=targetProcess)
 				{
-				printf("Rank%d sends Bucket: %d bis %d , with %d Tweets to %d\n ",rank,nextBucket, i, localCount,targetProcess);
+					printf("Rank%d sends Bucket: %d bis %d (%d Buckets), with %d Tweets to %d\n ",rank,nextBucket, i, *(processBuckets + targetProcess), localCount,targetProcess);
+			        MPI_Isend(
+			        	currentBucket,
+			        	localCount*TSIZE,
+			            MPI_CHAR,
+			            targetProcess,
+			            0,
+			            MPI_COMM_WORLD,
+			            &req
+			            );
 				}
+				else
+				{
+					localBucket = currentBucket;
+				}
+				currentBucket = currentBucket+localCount*TSIZE;
 				targetProcess += 1;
 				nextBucket = i+1;
 				globalCount = 0;
 				localCount = 0;
 			}
+		}
 
-		}
-		if(rank!=targetProcess)
-		{
-		printf("Rank%d sends Bucket: %d bis %d , with %d Tweets to %d.\n ",rank,nextBucket, 255, localCount,targetProcess);
-		}
-		memcpy(A,B,TSIZE**n);
+		currentBucket = A;
+	    for (int p = 0; p < processes; p++) {
+	      int receiveSize = 0;
+		  nextBucket = 0;
+	      for(i = 0; i<rank;i++)
+	      {
+	    	  nextBucket += *(processBuckets+i);
+	    	  printf("Rank%d, next Bucket %d\n",rank,nextBucket);
+	      }
+	      for(i = 0; i<*(processBuckets+rank); i++)
+	      {
+	    	  receiveSize += *(globalBuckets + p*256 + nextBucket + i);
+	    //	  printf("%d ",*(globalBuckets + p*256 + nextBucket));
+	      }
+	      printf("Rank%d receives %d Buckets from %d  pos %d Receive Size %d\n",rank,*(processBuckets+rank),p,nextBucket,receiveSize);
+	      nextBucket = 0;
+	      if (p != rank) {
+	        MPI_Recv(
+	        	currentBucket,
+	        	receiveSize*TSIZE,
+	            MPI_CHAR,
+	            p,
+	            0,
+	            MPI_COMM_WORLD,
+	            &stat);
+	        }
+	      else{
+	    	 memcpy(currentBucket,localBucket,receiveSize*TSIZE);
+	      }
+	      //writeOrderedTweets(currentBucket,receiveSize,rank);
+	      printf("Rank %d CurrentBucket %d receive size %d \n",rank,currentBucket,receiveSize);
+	      currentBucket += receiveSize*TSIZE;
+	    }
+	   // memcpy(A,B,TSIZE**n);
 	}
 }
 /* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
