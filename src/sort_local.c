@@ -14,8 +14,8 @@
 #include <string.h>
 #include <mpi.h>
 
-#define FIN "/home/vk/workspace/Twitter/twitter.data.gross"
-#define FOUT "/home/vk/workspace/Twitter/twitter.out2."
+#define FIN "/mpidata/parsys14/gross/twitter.data.0"
+#define FOUT "/mpidata/ergebnisse/g15_twitter.data_MK.out"
 
 #define TSIZE 32
 #define TNUM 24000000
@@ -134,6 +134,7 @@ void writeOrderedTweets(unsigned char* localTweets, int numberOfLocalTweets, int
 	strcpy(fileName, FOUT); /* copy name into the new var */
 	strcat(fileName, extension); /* add the extension */
 	FILE* f = fopen(fileName, "w");
+	if(!f) return;
 	int i;
 	unsigned char* tweet;
 	for (i=0, tweet=localTweets; i<numberOfLocalTweets; i++, tweet+=TSIZE) {
