@@ -248,7 +248,7 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 				*(processBuckets + targetProcess) = i-nextBucket+1;//Anzahl der Buckets im Prozess
 				if(rank!=targetProcess)
 				{
-					printf("Rank%d sends Bucket: %d bis %d (%d Buckets), with %d Tweets to %d\n ",rank,nextBucket, i, *(processBuckets + targetProcess), localCount,targetProcess);
+					//printf("Rank%d sends Bucket: %d bis %d (%d Buckets), with %d Tweets to %d\n ",rank,nextBucket, i, *(processBuckets + targetProcess), localCount,targetProcess);
 			        MPI_Isend(
 			        	currentBucket,
 			        	localCount*TSIZE,
@@ -278,14 +278,14 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 	      for(i = 0; i<rank;i++)
 	      {
 	    	  nextBucket += *(processBuckets+i);
-	    	  printf("Rank%d, next Bucket %d\n",rank,nextBucket);
+	    	 // printf("Rank%d, next Bucket %d\n",rank,nextBucket);
 	      }
 	      for(i = 0; i<*(processBuckets+rank); i++)
 	      {
 	    	  receiveSize += *(globalBuckets + p*256 + nextBucket + i);
 	    //	  printf("%d ",*(globalBuckets + p*256 + nextBucket));
 	      }
-	      printf("Rank%d receives %d Buckets from %d  pos %d Receive Size %d\n",rank,*(processBuckets+rank),p,nextBucket,receiveSize);
+	      //printf("Rank%d receives %d Buckets from %d  pos %d Receive Size %d\n",rank,*(processBuckets+rank),p,nextBucket,receiveSize);
 	      nextBucket = 0;
 	      if (p != rank && receiveSize > 0) {
 	        MPI_Recv(
@@ -301,7 +301,7 @@ void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
 	    	 memcpy(currentBucket,localBucket,receiveSize*TSIZE);
 	      }
 	      //writeOrderedTweets(currentBucket,receiveSize,rank);
-	      printf("Rank %d CurrentBucket %d receive size %d \n",rank,currentBucket,receiveSize);
+	      //printf("Rank %d CurrentBucket %d receive size %d \n",rank,currentBucket,receiveSize);
 	      currentBucket += receiveSize*TSIZE;
 	    }
 	   // memcpy(A,B,TSIZE**n);
