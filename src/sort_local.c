@@ -14,13 +14,13 @@
 #include <string.h>
 #include <mpi.h>
 
-//#define FIN "/mpidata/parsys14/gross/twitter.data."
-#define FIN "/home/vk/workspace/Twitter/twitter.data.gross."
-//#define FOUT "/mpidata/ergebnisse/g15_twitter.data.out."
-#define FOUT "/home/vk/workspace/Twitter/g15_twitter.data.out."
+#define FIN "/mpidata/parsys14/gross/twitter.data."
+// #define FIN "/home/vk/workspace/Twitter/twitter.data.gross."
+#define FOUT "/mpidata/ergebnisse/g15_twitter.data.out."
+// #define FOUT "/home/vk/workspace/Twitter/g15_twitter.data.out."
 
 #define TSIZE 32
-#define TNUM 2400000
+#define TNUM 24000000
 
 char* MONTHS[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
@@ -87,25 +87,31 @@ void writeTweet(unsigned char* tweet, const int fn, const int ln, const int hits
 }
 
 void readTweets(const char* key, unsigned char* localTweets, int startTweet, int numberOfLocalTweets, int rank) {
-        char extension[15];
-        sprintf(extension, "%d", rank);
-        char* fileName;
-        fileName = malloc(strlen(FIN)+15); /* make space for the new string (should check the return value ...) */
-        strcpy(fileName, FIN); /* copy name into the new var */
-        strcat(fileName, extension);	
-        printf("Rank for file:%s\n",fileName);
-	FILE* f = fopen(fileName, "r");
-	if (f == NULL) fprintf(stderr, "open failed: %s\n", FIN);
-	int i;
-	char buffer[1024];
-	unsigned char* tweet;
+    char extension[15];
+    char host[MPI_MAX_PROCESSOR_NAME] = { 0 };
+    int hostlen;
+    sprintf(extension, "%d", rank);
+    char* fileName;
+    fileName = malloc(strlen(FIN)+15); /* make space for the new string (should check the return value ...) */
+    strcpy(fileName, FIN); /* copy name into the new var */
+    strcat(fileName, extension);	
+    MPI_Get_processor_name(host, &hostlen);
+    printf("Rank for file: %s @ %s\n",fileName, host);
+    FILE* f = fopen(fileName, "r");
+    if (f == NULL) {
+        fprintf(stderr, "open failed: %s\n", FIN);
+        return;
+    }
+    int i;
+    char buffer[1024];
+    unsigned char* tweet;
 
-	for (i=0; i<startTweet; i++) {
-		char* line = fgets(buffer, 1024, f);
-		if (line == NULL) {
-			fprintf(stderr, "error reading line %d\n", i);
-			exit(2);
-		}
+    for (i=0; i<startTweet; i++) {
+        char* line = fgets(buffer, 1024, f);
+        if (line == NULL) {
+            fprintf(stderr, "error reading line %d\n", i);
+            exit(2);
+        }
 	}
 	for (i=startTweet, tweet=localTweets; i<startTweet+numberOfLocalTweets; i++, tweet+=TSIZE) {
 		char* line = fgets(buffer, 1024, f);
@@ -142,6 +148,7 @@ void writeOrderedTweets(unsigned char* localTweets, int numberOfLocalTweets, int
 	fileName = malloc(strlen(FOUT)+15); /* make space for the new string (should check the return value ...) */
 	strcpy(fileName, FOUT); /* copy name into the new var */
 	strcat(fileName, extension); /* add the extension */
+    (void) unlink(fileName);
 	FILE* f = fopen(fileName, "w");
 	if(!f) return;
 	int i;
@@ -151,10 +158,6 @@ void writeOrderedTweets(unsigned char* localTweets, int numberOfLocalTweets, int
 		int* lnp = (int*) (tweet+2);
 		fprintf(f, "%d %d\n", *fnp, *lnp);
 	}
-	//  for (i=0, tweet=TWEETS; i<20; i++, tweet+=TSIZE) {
-	//	  printTweet(tweet);
-	//	  printf("\n");
-	//  }
 	for (i=0, tweet=localTweets+TSIZE*(numberOfLocalTweets-1); i<10; i++, tweet-=TSIZE) {
 		printTweet(tweet, rank);
 		printf("\n");
@@ -162,7 +165,7 @@ void writeOrderedTweets(unsigned char* localTweets, int numberOfLocalTweets, int
 	fclose(f);
 }
 
-/* Dieser Redixsort sortiert n Pointer auf Strings der Größe n
+/* Dieser Radixsort sortiert n Pointer auf Strings der Größe n
  * in ein Array A.
  */
 void radixSortMPI (unsigned char *A, int *n, int d, int rank, int processes) {
@@ -351,41 +354,41 @@ void radixSort (unsigned char *A,	int n, int d) {
 }
 
 int main(int argc, char** argv) {
-	int i , rank, processes, numberOfLocalTweets;
-	unsigned char *localTweets;
-	double start, r_time, s_time, end;
+    int i , rank, processes, numberOfLocalTweets;
+    unsigned char *localTweets;
+    double start, r_time, s_time, end;
 
-	  // initialize MPI environment and obtain basic info
-	  MPI_Init(&argc, &argv);
+    // initialize MPI environment and obtain basic info
+    MPI_Init(&argc, &argv);
 
-	  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	  MPI_Comm_size(MPI_COMM_WORLD, &processes);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &processes);
 
-	if (argc != 2) {
-		fprintf(stderr, "please specify search key\n");
-		exit(1);
-	}
+    if (argc != 2) {
+        fprintf(stderr, "please specify search key\n");
+        exit(1);
+    }
 
-	numberOfLocalTweets = TNUM;//processes;
-	localTweets = (unsigned char*) malloc(TSIZE*TNUM*1.4);
-	start = MPI_Wtime();
-//	readTweets(argv[1],localTweets,numberOfLocalTweets*rank,numberOfLocalTweets,rank);
-	
-	readTweets(argv[1],localTweets,numberOfLocalTweets*0,numberOfLocalTweets,rank%4);
-	MPI_Barrier(MPI_COMM_WORLD);
-	r_time = MPI_Wtime();
-	radixSortMPI(localTweets, &numberOfLocalTweets , TSIZE, rank, processes);
-	radixSort(localTweets, numberOfLocalTweets , TSIZE);
+    numberOfLocalTweets = TNUM;//processes;
+    localTweets = (unsigned char*) malloc(TSIZE*TNUM*1.2);
+    start = MPI_Wtime();
+    //	readTweets(argv[1],localTweets,numberOfLocalTweets*rank,numberOfLocalTweets,rank);
 
-	s_time = MPI_Wtime();
-	MPI_Barrier(MPI_COMM_WORLD);
-	//qsort(TWEETS, TNUM, TSIZE, compare);
-	writeOrderedTweets(localTweets,numberOfLocalTweets,rank);
-	end = MPI_Wtime();
-	if(rank == 0)
-	{
-		printf("Gesamtzeit: %04.4f Sortierzeit: %04.4f\n",(end-start),(s_time-r_time));
-	}
+    readTweets(argv[1], localTweets, 0, numberOfLocalTweets, rank);
+    MPI_Barrier(MPI_COMM_WORLD);
+    r_time = MPI_Wtime();
+    radixSortMPI(localTweets, &numberOfLocalTweets , TSIZE, rank, processes);
+    radixSort(localTweets, numberOfLocalTweets , TSIZE);
+
+    s_time = MPI_Wtime();
+    MPI_Barrier(MPI_COMM_WORLD);
+    //qsort(TWEETS, TNUM, TSIZE, compare);
+    writeOrderedTweets(localTweets,numberOfLocalTweets,rank);
+    end = MPI_Wtime();
+    if(rank == 0)
+    {
+        printf("Gesamtzeit: %04.4f Sortierzeit: %04.4f\n",(end-start),(s_time-r_time));
+    }
     MPI_Finalize();
 }
 
